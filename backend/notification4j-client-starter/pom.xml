@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>fun.commons.notification4j</groupId>
+        <artifactId>notification4j-parent</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <!-- 编码第 30 步：业务方轻量接入（部署形态三·跨进程 remote）。零 MyBatis/数据面/控制器/引擎，
+         只交付 NotifyClient Bean（HTTP + S2S JWT + HMAC 签名）。与全量 notification4j-starter 互斥
+         （契约见 backend/README.md 部署节）：API 类（fun.commons.notification4j.client 四件）同 FQCN
+         同形态提炼（切换零改码），实现类独立包 fun.commons.notification4j.remote（共存无链接错配）。 -->
+    <artifactId>notification4j-client-starter</artifactId>
+
+    <dependencies>
+        <!-- 自动装配基座（Boot BOM 3.2.7） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- framework4j 传输抽象（HttpTransport / RestTemplateHttpTransport）；
+             仅传递 framework4j-api（web 为 optional），依赖树无 mybatis/jdbc -->
+        <dependency>
+            <groupId>com.github.funcommons.framework4j</groupId>
+            <artifactId>framework4j-transport</artifactId>
+            <version>${framework4j.version}</version>
+        </dependency>
+
+        <!-- S2S JWT 生成器（token 降级路径保留：类缺席/Bean 缺席时仅 HMAC 签名）。
+             optional：不向业务方传递（accesstoken 自带 spring-boot-starter-data-redis 重依赖，
+             轻量接入不应被强拉；业务方需要 JWT 自动注入时自行引入） -->
+        <dependency>
+            <groupId>com.github.funcommons.framework4j</groupId>
+            <artifactId>framework4j-accesstoken</artifactId>
+            <version>${framework4j.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 信封解析/签名串 body md5 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- HttpTransport 出口就是 HTTP：RestTemplate（delegate 装配用） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

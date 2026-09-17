@@ -1,0 +1,183 @@
+server:
+  port: 9200
+  shutdown: graceful                # 优雅停机: SIGTERM 后处理完在途请求再退出
+
+spring:
+  application:
+    name: notification4j-backend
+  profiles:
+    active: dev
+  lifecycle:
+    timeout-per-shutdown-phase: 30s   # 优雅停机最多等 30s
+  flyway:
+    enabled: true
+    locations: classpath:db/migration   # 脚本在 starter resources(与实体同源), app 合并 classpath 可见
+    baseline-on-migrate: false          # 全新库从头执行 V1.0.0; 非空库须先人工清理, 不静默 baseline
+    validate-on-migrate: true
+    # 独立 datasource 绕过 Druid Wall (Wall 拦 Flyway 脚本的注释/部分索引 WHERE 等 PG 语法)
+    url: jdbc:postgresql://localhost:5432/notification4j?stringtype=unspecified
+    user: admin
+    password: test@2026
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notification4j?stringtype=unspecified
+    username: admin
+    password: test@2026
+    driver-class-name: org.postgresql.Driver
+
+framework4j:
+  redis:
+    enabled: true
+    datasources:
+      default:
+        host: localhost
+        port: 6379
+        lettuce:
+          pool:
+            max-active: 50          # 默认 8 太小, 生产 50
+            max-idle: 20
+            min-idle: 5
+  datasource:
+    enabled: true
+    datasources:
+      default:
+        url: jdbc:postgresql://localhost:5432/notification4j?stringtype=unspecified
+        username: admin
+        password: test@2026
+        druid:
+          initial-size: 10
+          min-idle: 10
+          max-active: 50          # 默认 20 太小, 生产 50
+          max-wait: 1000           # 获取连接超时 1s (默认 60s 太长)
+          test-while-idle: true
+          validation-query: SELECT 1
+        mybatisPlusPlugins:
+          optimisticLock: true
+          pagination: true
+          blockAttack: true
+          dbType: POSTGRE_SQL
+    # SQL 追踪: Druid Filter 注入 /*traceid=xxx*/ 注释, 慢 SQL 定位 (默认 matchIfMissing=true, 显式配明确化)
+    sql-tracing:
+      enabled: true
+      mode: ALL        # DISABLED / WRITE_ONLY / ALL
+  tenant:
+    enabled: true
+    table-prefix: nfya_             # 租户表 = nfya_tenant(项目简码规范;Flyway 管结构 → PROVIDED)
+    ddl-mode: PROVIDED
+    auth:
+      path: /nfy/api/v1/auth/token   # framework4j-tenant TenantAuthEndpoint(NfyAuthFlowTest 已验)
+      token-type: TENANT             # ADR-0007 独立型别; 平台域走 platform.client-id 合成租户 tenant_id=0
+      expire-seconds: 28800          # 契约默认 8h(上限 12h, 《租户设计》§5.2 M2M 口径)
+      max-fail: 5                    # 连续失败锁定(防爆破)
+      lock-minutes: 15
+    platform:
+      client-id: ${PLATFORM_CLIENT_ID:PLATFORM}
+      client-secret: ${PLATFORM_CLIENT_SECRET}
+    secret:
+      grace-hours: 24                # 密钥轮换宽限期(§5.5)
+
+  access-token:
+    enabled: true
+    redis-name: default
+    secret-key: ${JWT_SECRET}
+    hash-salt: ${HASH_SALT:salt}
+    exclude-path-patterns: ["/nfy/api/v1/auth/token", "/nfy/open/**", "/nfy/api/v1/ops/health", "/swagger-ui/**", "/v3/api-docs/**", "/tracelog", "/tracelog/**"]   # open 域无鉴权(IP 限流兜底); tracelog 控制台静态页放行 (其 API /api/logs/** 仍走 token + OPS 鉴权)
+    policies:
+      TENANT:                        # 与 tenant.auth.token-type 同名(IT 实测: key 绑定为单值)
+        key: tenant_id
+        expire-time: 28800
+        auto-renew: true
+        renew-increment: 1800
+      PLATFORM:                      # 平台域型别(合成租户 tenant_id=0)
+        key: tenant_id
+        expire-time: 28800
+      OPS:                           # tracelog 控制台鉴权沿用(仅运维)
+        key: tenant_id
+        expire-time: 28800
+  signature:
+    enabled: true
+    timestamp-tolerance-ms: 300000      # ±5min
+    nonce-ttl-seconds: 600              # nonce 10min 防重放
+    nonce-key-prefix: notification4j:sig:nonce
+    redis-name: default
+    path-patterns: ["/nfy/api/v1/runtime/**", "/nfy/api/v1/assets/runtime/**"]   # 对外 runtime API 强制签名(含 assets)
+    exclude-path-patterns: []
+  sensitive:
+    enabled: true
+    encryption-key: ${AES_KEY}
+  idempotency:
+    enabled: true
+    header-name: Idempotency-Key        # 三方传 UUID v4
+    key-prefix: notification4j:idem
+    ttl-seconds: 172800                # 48h
+    body-hash-required: true           # 防同 key 不同 body
+    redis-name: default
+    # 写面幂等（评审第 3/4 步 P1/P2：仅覆盖业务声明的幂等端点；同 key 同 body 返回首次结果）
+    path-patterns:
+      - "/nfy/api/v1/runtime/messages"
+      - "/nfy/api/v1/runtime/channels"
+      - "/nfy/api/v1/runtime/subscriptions"
+  audit:
+    enabled: true
+    table-name: nfyp_audit_log
+  # 动态追踪日志: 按 traceId/URL/userId 临时提权 DEBUG, 日志聚合 Redis, 开关自动过期
+  # 控制台 http://localhost:9200/tracelog/index.html (API /api/logs/** 需 OPS token, NfyTraceLogAuthValidator)
+  tracelog:
+    enabled: true
+    redis-name: default
+    storage:
+      key-prefix: notification4j:trace_log     # 日志 List key: notification4j:trace_log:{traceId}
+    collection:
+      fallback-dir: /tmp/notification4j-tracelog-fallback   # Redis 故障降级目录 (容器化需挂载)
+    sync:
+      channel: notification4j:channel:log_switch            # 开关广播频道 (注意是 sync 段, 非 switch)
+    elevation:
+      allowed-packages:
+        - fun.commons.notification4j                        # 提权作用域限业务包
+      default-level: DEBUG
+    api:
+      require-auth: true                               # 默认即 true, 显式声明 (OPS-only, 未配 Validator 启动 fail-fast)
+      max-return-logs: 500
+  rate-limit:
+    enabled: true             # 压测已恢复
+    redis-name: default
+    key-prefix: notification4j:rl
+    default-scope: APP        # 按 Tenant 维度限流 (从 TokenContext 取 tenant_id)
+    default-limit: 100
+    default-window: 1m
+    default-algorithm: SLIDING_WINDOW
+    path-patterns: ["/nfy/api/v1/runtime/**", "/nfy/api/v1/assets/**", "/nfy/api/v1/platform/assets/**", "/nfy/open/**"]   # assets 端点 @RateLimit 注解决定规则,路径须覆盖; open 域 IP 限流兜底(评审 P1)
+    whitelist-paths: ["/nfy/api/v1/auth/token"]
+
+
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+# ==== notification4j 业务段（评审第 6b 步 P1：出厂双开，避免「API 404 + 引擎不跑」双静默）====
+nfy:
+  runtime:
+    enable-api: true         # 独立部署形态：三域 API 开启
+    mode: local
+    engine:
+      enabled: true          # 外发引擎开启（嵌入形态业务方按需关闭）
+      scan-interval-ms: 5000
+      batch-size: 50
+      reaper-interval-ms: 60000
+      sending-stale-ms: 600000
+      backoff-seconds: "60,300,900"   # 1/5/15min（契约 §4.3）
+      rate-limit-per-minute: 18       # 每渠道投递限速（钉钉/企微 20/min 的 90%）；0=关
+      worker-count: 4                 # 投递工作线程数（跨渠道共享池，V1.0；池隔离登记排期）
+
+  # ==== 静态页托管（编码第 29 步「免双部署」）：前端 SPA 入 jar，本进程同时服务页面与 API ====
+  # 产物：frontend/dist 精确拷贝至 starter classpath:/nfy-console/（再生成方式见 backend/README.md「部署」节）；
+  # 开关缺省 false（嵌入方零污染——不声明即不装配任何静态 handler），app 独立部署形态出厂开启。
+  # 注意：/nfy/api/**、/nfy/open/**、/nfy/platform/api/** 是 API 面，静态转发（/ 与 /nfy/tenant/**）永不覆盖。
+  static-page:
+    enabled: true

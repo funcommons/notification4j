@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+  <!--
+    动态追踪日志(framework4j-tracelog): 无需在此声明 TurboFilter/Appender ——
+    DynamicLevelTurboFilter 与 AsyncRedisLogAppender 依赖 Spring Bean (TraceLogStore/Properties),
+    由 TraceLogBeansConfig 编程式注册 (TurboFilter 加入 LoggerContext, Appender 挂到 root)。
+    此处只需把业务包 logger 设 DEBUG: 平时被 TurboFilter 拦下 (事件不输出不采集), 提权后放行。
+  -->
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} [traceId=%X{traceId:-}] - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="STDOUT"/>
+  </root>
+
+  <!--
+    业务包设 DEBUG: mybatis 等 isDebugEnabled() guard 型日志只有 logger 为 DEBUG
+    才生成事件, TurboFilter 才有机会按提权状态 ACCEPT/DENY。
+    未提权的 DEBUG 事件由 DynamicLevelTurboFilter 以 root 级别 (INFO) 为基准 DENY 拦截,
+    不会全量输出; 提权命中后 ACCEPT 直接放行 (绕过级别检查)。
+  -->
+  <logger name="fun.commons.notification4j" level="DEBUG"/>
+</configuration>

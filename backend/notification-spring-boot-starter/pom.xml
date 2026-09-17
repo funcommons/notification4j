@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>fun.commons.notification4j</groupId>
+        <artifactId>notification4j-parent</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>notification4j-starter</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.retry</groupId>
+            <artifactId>spring-retry</artifactId>
+        </dependency>
+
+        <!-- 外发引擎 EMAIL 通道（Jakarta Mail API + Angus 实现，离线 m2 可用版本） -->
+        <dependency>
+            <groupId>jakarta.mail</groupId>
+            <artifactId>jakarta.mail-api</artifactId>
+            <version>2.1.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.angus</groupId>
+            <artifactId>angus-mail</artifactId>
+            <version>2.0.5</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- framework4j 租户横切面(三域守卫/认证端点/密钥生命周期/注册码) -->
+        <dependency>
+            <groupId>com.github.funcommons.framework4j</groupId>
+            <artifactId>framework4j-tenant</artifactId>
+            <version>${framework4j.version}</version>
+        </dependency>
+
+        <!-- framework4j SDK All -->
+        <dependency>
+            <groupId>com.github.funcommons.framework4j</groupId>
+            <artifactId>framework4j-all</artifactId>
+            <version>${framework4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 测试分层（第 24 步）：显式声明单测三件套，版本走 Boot 3.2.7 BOM（m2 实有：
+             junit-jupiter 5.10.2 / mockito-core+mockito-junit-jupiter 5.7.0） -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Resilience4j: remote 模式重试 + 熔断 (跨进程调用可靠性) -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+            <version>2.2.0</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Spring WebFlux: WebClient (非阻塞响应式, remote 高 QPS 场景, 可选) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 测试分层（第 24 步）：JaCoCo 覆盖率基线。版本钉 0.8.13（m2 实有，覆盖父 pom 继承的 0.8.11）；
+                 execution（prepare-agent + report@test）继承父 pom：
+                 · prepare-agent(default) → target/jacoco.exec（单测口径）
+                 · report(report) → target/site/jacoco（单测口径报告，保留作分层视图） -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.13</version>
+                <executions>
+                    <!-- 覆盖率口径升级（第 27 步）：merge 单测 exec + it 模块 exec（MockMvc 全链路，
+                         覆盖 controller/autoconfigure/engine 调度线程）→ 全链路真实覆盖率报告 + check 防回退门槛。
+                         跨模块 exec 路径：notification4j-it/target/jacoco-it.exec 相对本模块 basedir 寻址
+                         （fileSet 天然忽略不存在的文件——全新环境只 merge 单测 exec，check 会拦下并提示先跑 IT）。
+                         注意：本模块单测 exec 由 surefire fork 退出时落盘，merge/report/check 与父 pom report
+                         同绑 test 阶段且声明在 surefire 之后执行，顺序成立。 -->
+                    <execution>
+                        <id>merge-unit-it</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>merge</goal>
+                        </goals>
+                        <configuration>
+                            <fileSets>
+                                <fileSet>
+                                    <directory>${project.build.directory}</directory>
+                                    <includes>
+                                        <include>jacoco.exec</include>
+                                    </includes>
+                                </fileSet>
+                                <!-- Ant DirectoryScanner 不越过 basedir，跨模块 exec 用独立 fileSet 指目录 -->
+                                <fileSet>
+                                    <directory>${project.basedir}/../notification4j-it/target</directory>
+                                    <includes>
+                                        <include>jacoco-it.exec</include>
+                                    </includes>
+                                </fileSet>
+                            </fileSets>
+                            <destFile>${project.build.directory}/jacoco-merged.exec</destFile>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>report-merged</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <dataFile>${project.build.directory}/jacoco-merged.exec</dataFile>
+                            <outputDirectory>${project.reporting.outputDirectory}/jacoco-merged</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <!-- 门槛一（精确 100% 包）：合并口径下行覆盖恰为 100% 的包逐包卡死。
+                             实测（2026-09-17 合并报告）：dto/entity/kms/tracelog 全 100%；
+                             client 99.1%、util 84.0%——残余未覆盖行仅在两个类的防御 catch 里
+                             （RemoteNotifyClient#parse「远端响应非 JSON」、WebhookSigner 两个 JCE catch，
+                             JVM 内不可达），按类粒度精确排除后两包余下类全 100%，一并纳入本门槛。
+                             第 28 步：controller 94.1%→100%（9 缺口行：TYP update、PAN patch、
+                             ops-health redis/db 探针 catch，切片单测补齐后纳入）→ 七包名单。
+                             排除类仍受门槛二 BUNDLE 兜底，不脱离监控。 -->
+                        <id>check-merged-exact</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <dataFile>${project.build.directory}/jacoco-merged.exec</dataFile>
+                            <includes>
+                                <include>fun/commons/notification4j/dto/**</include>
+                                <include>fun/commons/notification4j/entity/**</include>
+                                <include>fun/commons/notification4j/kms/**</include>
+                                <include>fun/commons/notification4j/tracelog/**</include>
+                                <include>fun/commons/notification4j/client/**</include>
+                                <include>fun/commons/notification4j/util/**</include>
+                                <include>fun/commons/notification4j/controller/**</include>
+                            </includes>
+                            <excludes>
+                                <exclude>fun/commons/notification4j/client/RemoteNotifyClient*</exclude>
+                                <exclude>fun/commons/notification4j/util/WebhookSigner*</exclude>
+                            </excludes>
+                            <rules>
+                                <rule>
+                                    <element>PACKAGE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>1.00</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <!-- 门槛二（BUNDLE 防回退兜底）：合并口径实测行覆盖 96.14%（2418/2515），
+                             门槛定 96%——新增/改动业务行未测即挂（1 行 ≈ 0.04pp），同时容忍 ±1~2 行
+                             字节码噪声。autoconfigure（装配条件分支，remote/traceLog 等 IT 不触达的
+                             @Conditional 装配行，全包同理由）不设 100% 门槛但计入本 BUNDLE 口径。 -->
+                        <id>check-merged</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <dataFile>${project.build.directory}/jacoco-merged.exec</dataFile>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.96</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

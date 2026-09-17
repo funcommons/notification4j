@@ -1,0 +1,29 @@
+# --- build artifacts ---
+target/
+dist/
+coverage/
+
+# --- frontend ---
+node_modules/
+frontend/dist/
+frontend/coverage/
+*.local
+
+# --- IDE ---
+.idea/
+*.iml
+.vscode/
+
+# --- Claude session-local ---
+.claude/
+
+# --- OS ---
+.DS_Store
+
+# --- logs ---
+*.log
+logs/
+
+# --- test execution artifacts ---
+*.exec
+jacoco.exec
