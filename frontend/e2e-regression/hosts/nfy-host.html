@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>NFY e2e 宿主</title>
+<style>
+  body{font:14px/1.6 system-ui;margin:0;background:#eef2ff;color:#1e293b}
+  header{padding:8px 14px;background:#c7d2fe;font-weight:600}
+  iframe{display:block;width:100%;height:calc(100vh - 41px);border:0;background:#fff}
+  #st{font-weight:400;font-family:Menlo,monospace;font-size:12px;margin-left:10px}
+</style>
+</head>
+<body>
+<header>宿主应用（模拟业务方页面）<span id="st">握手未开始</span></header>
+<iframe id="nfy" src="about:blank"></iframe>
+<script>
+// 宿主页（origin http://localhost:3000 —— 出厂白名单内）：
+//   1. iframe 加载消息中心（同宿主 fat jar 9200）
+//   2. 收 NFY_READY → 回 NFY_TOKEN{token,user_id}（PRD F-EMB-001 握手协议）
+// 参数：?page=messages|announcements|channels|subscriptions|deliveries&token=..&user_id=..&silent=1
+const q = new URLSearchParams(location.search)
+const page = q.get('page') || 'messages'
+const st = document.getElementById('st')
+const frame = document.getElementById('nfy')
+frame.src = 'http://localhost:9200/nfy/tenant/app/' + page
+
+const token = q.get('token') || ''
+const userId = q.get('user_id') || ''
+let sent = false
+
+window.addEventListener('message', (e) => {
+  if (e.origin !== 'http://localhost:9200') return
+  if (e.data && e.data.type === 'NFY_READY') {
+    st.textContent = '收到 NFY_READY' + (sent ? '（重握手）' : '')
+    if (!sent || q.get('replay') === '1') {
+      e.source.postMessage({ type: 'NFY_TOKEN', token, user_id: userId }, 'http://localhost:9200')
+      sent = true
+    }
+  }
+})
+// 供 e2e 断言握手状态（宿主侧观察点，不影响产品）
+window.NFY_HOST_STATE = () => ({ sent, page, tokenLen: token.length, userId })
+</script>
+</body>
+</html>

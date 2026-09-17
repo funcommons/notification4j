@@ -7,6 +7,7 @@ import { createNfyClient } from '@/api/nfy/client'
 import { createMessageApi, type MessageItem } from '@/api/nfy'
 import { createEmbedHandshake } from '@/composables/nfy/useEmbedHandshake'
 import { useUnreadCount } from '@/composables/nfy/useUnreadCount'
+import { parseFwkTime } from '@/utils/fwkTime'
 
 const props = defineProps<{ baseUrl?: string; origins?: string; jumpUrl?: string }>()
 
@@ -22,6 +23,8 @@ const apis = createMessageApi(
     baseUrl: props.baseUrl ?? import.meta.env.VITE_NFY_BASE_URL ?? '/nfy/api/v1',
     getToken: () => handshake.token.value,
     getUserId: () => handshake.userId.value,
+    // F-2：鉴权失败（401/信封 102xx）→ 重新握手，宿主重新发 token 后自愈
+    onAuthExpired: () => handshake.notifyExpired(),
   }),
 )
 
@@ -30,6 +33,9 @@ const open = ref(false)
 const recent = ref<MessageItem[]>([])
 
 const badge = () => (total.value > 99 ? '99+' : total.value > 0 ? String(total.value) : '')
+
+/** 后端时间为 Long→String 数字字符串（fwk 精度保护），必须经 parseFwkTime 归一 */
+const fmtDate = (v: MessageItem['created_at']) => parseFwkTime(v)?.toLocaleDateString() ?? ''
 
 async function toggle() {
   open.value = !open.value
@@ -58,7 +64,7 @@ onMounted(() => {
       <ul>
         <li v-for="m in recent" :key="m.message_id" :class="{ unread: m.read_status === 'UNREAD' }">
           <span>{{ m.title }}</span>
-          <time>{{ m.created_at ? new Date(m.created_at).toLocaleDateString() : '' }}</time>
+          <time>{{ fmtDate(m.created_at) }}</time>
         </li>
         <li v-if="!recent.length" class="empty">暂无消息</li>
       </ul>

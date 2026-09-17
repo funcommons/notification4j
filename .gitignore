@@ -27,3 +27,7 @@ logs/
 # --- test execution artifacts ---
 *.exec
 jacoco.exec
+
+# --- playwright run artifacts ---
+frontend/test-results/
+frontend/playwright-report/

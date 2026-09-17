@@ -1,0 +1,17 @@
+== L1 start 07:13:52
+== L1 RC=0 [INFO] Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
+== L2 start 07:14:05
+== L2 RC=0 [INFO] Tests run: 21, Failures: 0, Errors: 0, Skipped: 0
+== L3 start 07:14:21
+== L3 RC=0 [INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0
+== L4 start 07:14:32
+== L4 RC=0 [INFO] Tests run: 21, Failures: 0, Errors: 0, Skipped: 0
+== L5 start 07:14:44
+== L5 RC=0 [INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0
+== L6 start 07:15:01
+== L6 RC=0 [INFO] Tests run: 17, Failures: 0, Errors: 0, Skipped: 0
+== L7 start 07:15:14
+== L7 RC=0 [INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0
+== L8 start 07:15:25
+== L8 RC=0 [INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0
+ALL_DONE 07:15:36

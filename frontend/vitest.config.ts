@@ -16,6 +16,7 @@ export default defineConfig({
     setupFiles: ['src/components/sdk/__tests__/setup.ts'],
     // e2e/ 是 Playwright 用例(test:e2e 跑),vitest 误扫必挂 79 个 —— 显式排除
     // V1.0 收官: 旧用例已随迁 legacy/e2e/ (同属 Playwright, 同样排除, 防误扫)
-    exclude: ['e2e/**', 'legacy/e2e/**', 'node_modules/**'],
+    // e2e-regression/ 同为 Playwright 线上回归 (test:e2e 跑), 一并排除防误扫
+    exclude: ['e2e/**', 'legacy/e2e/**', 'e2e-regression/**', 'node_modules/**'],
   },
 })

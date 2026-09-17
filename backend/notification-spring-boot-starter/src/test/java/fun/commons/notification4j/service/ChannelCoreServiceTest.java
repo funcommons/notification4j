@@ -211,6 +211,38 @@ class ChannelCoreServiceTest {
                 .isInstanceOfSatisfying(ApiException.class, e -> assertThat(e.getCode()).isEqualTo(10610));
     }
 
+    // ND-L5-01（P1）EMAIL 直启/熔断重启用豁免：IM（DINGTALK/WECOM/FEISHU）未验证 10610 / 熔断 10610
+    // 由上方 patch_enable_without_prior_verify_throws_10610、patch_enable_with_burnout_fail_count_throws_10610 钉死不变。
+
+    @Test
+    void patch_email_pending_enable_succeeds_without_verify() {
+        // EMAIL verify 恒 10604「首次投递时校验」→ last_verify_at 无通路可置上；
+        // 豁免已验证前置是 EMAIL 纯 API 唯一启用通路（PENDING 直启放行）
+        NfyaChannel ch = owned(1L, "u1", ChannelCoreService.SCOPE_USER);
+        ch.setChannelType("EMAIL"); // 从未验证：lastVerifyAt=null
+        when(channelMapper.selectById(9L)).thenReturn(ch);
+        var data = core.patch(1L, "u1", ChannelCoreService.SCOPE_USER, "9",
+                new PatchChannelsChannelIdRequest(null, "ENABLED"), "x");
+        verify(channelMapper).updateById(ch);
+        assertThat(ch.getStatus()).isEqualTo("ENABLED");
+        assertThat(data.get("status")).isEqualTo("ENABLED");
+    }
+
+    @Test
+    void patch_email_burnout_reenable_counts_as_reverify_and_resets_fail_count() {
+        // EMAIL 熔断态（fail_count≥5 自动停用）显式重新启用即视为重新验证：ENABLED 同时 fail_count 归 0
+        NfyaChannel ch = owned(1L, "u1", ChannelCoreService.SCOPE_USER);
+        ch.setChannelType("EMAIL");
+        ch.setFailCount(5);
+        when(channelMapper.selectById(9L)).thenReturn(ch);
+        var data = core.patch(1L, "u1", ChannelCoreService.SCOPE_USER, "9",
+                new PatchChannelsChannelIdRequest(null, "ENABLED"), "x");
+        verify(channelMapper).updateById(ch);
+        assertThat(ch.getStatus()).isEqualTo("ENABLED");
+        assertThat(ch.getFailCount()).isZero();
+        assertThat(data.get("status")).isEqualTo("ENABLED");
+    }
+
     @Test
     void patch_enable_verified_channel_succeeds() {
         NfyaChannel ch = owned(1L, "u1", ChannelCoreService.SCOPE_USER);

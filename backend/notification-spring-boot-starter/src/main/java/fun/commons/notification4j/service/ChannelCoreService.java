@@ -112,6 +112,12 @@ public class ChannelCoreService {
     /**
      * 改名/启停公共核心：10610 判定收口一处——ENABLED 前置已验证（last_verify_at 非空），
      * 熔断态（连续失败 fail_count≥5 自动停用）须先重新验证。调用方 @Transactional 短事务。
+     * <p>ND-L5-01（P1）EMAIL 豁免：EMAIL verify 恒 10604「EMAIL 通道暂不支持主动验证(首次投递时校验)」
+     * （ChannelVerifier 文案契约），last_verify_at 仅 verify 成功/首次投递成功（DeliveryEngine 成功回写）
+     * 才置位 → 对 EMAIL 强制已验证前置则纯 API 永无 ENABLED 通路（初始启不了、熔断后也无法恢复）。
+     * 故 channel_type=EMAIL 时豁免 last_verify_at 前置：① PENDING 直启放行（首次投递时校验兜底）；
+     * ② 熔断态显式重新启用即视为重新验证（置 ENABLED 同时 fail_count 归 0，语义对齐 verify() 成功清零）。
+     * IM（DINGTALK/WECOM/FEISHU）行为一字不变：仍要求已验证 + 未熔断。
      */
     public Map<String, Object> patch(long tenantId, String userid, String scope, String channelId,
                                      PatchChannelsChannelIdRequest req, String notFoundMessage) {
@@ -123,9 +129,17 @@ public class ChannelCoreService {
             if (!"ENABLED".equals(req.status()) && !"DISABLED".equals(req.status())) {
                 throw new ApiException(10100, "status 仅允许 ENABLED/DISABLED");
             }
-            if ("ENABLED".equals(req.status())
-                    && (ch.getLastVerifyAt() == null || ch.getFailCount() != null && ch.getFailCount() >= 5)) {
-                throw new ApiException(10610, "渠道连续失败已自动停用，请重新验证");
+            if ("ENABLED".equals(req.status())) {
+                if ("EMAIL".equals(ch.getChannelType())) {
+                    // ND-L5-01 EMAIL 豁免（依据见方法注 10604 文案契约）：熔断态重启用=重新验证 → fail_count 归 0
+                    if (ch.getFailCount() != null && ch.getFailCount() >= 5) {
+                        ch.setFailCount(0);
+                    }
+                } else if (ch.getLastVerifyAt() == null
+                        || ch.getFailCount() != null && ch.getFailCount() >= 5) {
+                    // IM 原口径不变：ENABLED 前置已验证（last_verify_at 非空）且未熔断
+                    throw new ApiException(10610, "渠道连续失败已自动停用，请重新验证");
+                }
             }
             ch.setStatus(req.status());
         }

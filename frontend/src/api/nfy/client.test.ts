@@ -166,3 +166,53 @@ describe('nfy deliveries api', () => {
     expect((err as NfyApiError).message).toBe('非 DEAD 状态不可重投')
   })
 })
+
+// VECTOR: TAG=f2-auth-expired-callback
+// F-2：鉴权类失败 → onAuthExpired 回调（供 nfyContext 接线 notifyExpired/会话失效提示）。
+// 鉴权类 = HTTP 401 或信封 code∈fwk ApiCode 102xx「认证与账号类」段
+// （10200 未认证/10201 过期/10202 无效/10205 踢出/10207 格式错误/10208 注销…，
+//   实测 9200：无效签名→10202，乱串→10207，空 token→10200，均 HTTP 200 信封）。
+// 业务类失败（403 域闸 / 10100 参数 / 10402 业务规则 / 103xx 权限）不得触发。
+describe('nfy client onAuthExpired', () => {
+  function makeClient(adapter: AxiosRequestConfig['adapter'], onAuthExpired?: (e: NfyApiError) => void) {
+    return createNfyClient({ baseUrl: '/nfy/api/v1', getToken: () => 't', getUserId: () => 'u', adapter, onAuthExpired })
+  }
+
+  it.each([
+    ['信封 code=10202 令牌无效', { data: { code: 10202, message: '登录凭证无效', data: null } }, 10202],
+    ['信封 code=10201 凭证过期', { data: { code: 10201, message: '登录凭证已过期', data: null } }, 10201],
+    ['信封 code=10207 令牌格式错误', { data: { code: 10207, message: '令牌格式错误', data: null } }, 10207],
+    ['HTTP 401', { data: { code: 401, message: 'unauthorized' }, status: 401 }, 401],
+  ])('%s → 抛 NfyApiError 且触发 onAuthExpired', async (_name, resp, code) => {
+    const { adapter, responder } = stubAdapter()
+    responder.mockResolvedValue(resp)
+    const onAuthExpired = vi.fn()
+    const client = makeClient(adapter, onAuthExpired)
+    const err = await client.get('/runtime/messages').catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(NfyApiError)
+    expect((err as NfyApiError).code).toBe(code)
+    expect(onAuthExpired).toHaveBeenCalledTimes(1)
+    expect(onAuthExpired.mock.calls[0]?.[0]).toBe(err)
+  })
+
+  it.each([
+    ['业务 403（域闸，HTTP 403）', { data: { code: 403, message: '权限不足' }, status: 403 }],
+    ['权限 10300', { data: { code: 10300, message: '无权限访问', data: null } }],
+    ['参数 10100', { data: { code: 10100, message: '请求参数错误', data: null } }],
+    ['业务规则 10402', { data: { code: 10402, message: '非 DEAD 状态不可重投', data: null } }],
+  ])('%s → 不触发 onAuthExpired', async (_name, resp) => {
+    const { adapter, responder } = stubAdapter()
+    responder.mockResolvedValue(resp)
+    const onAuthExpired = vi.fn()
+    const client = makeClient(adapter, onAuthExpired)
+    await expect(client.get('/runtime/messages')).rejects.toBeInstanceOf(NfyApiError)
+    expect(onAuthExpired).not.toHaveBeenCalled()
+  })
+
+  it('未提供 onAuthExpired 时行为不变（向后兼容）', async () => {
+    const { adapter, responder } = stubAdapter()
+    responder.mockResolvedValue({ data: { code: 10202, message: '登录凭证无效', data: null } })
+    const client = makeClient(adapter)
+    await expect(client.get('/runtime/messages')).rejects.toMatchObject({ code: 10202 })
+  })
+})

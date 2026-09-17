@@ -9,6 +9,13 @@ spring:
     active: dev
   lifecycle:
     timeout-per-shutdown-phase: 30s   # 优雅停机最多等 30s
+  autoconfigure:
+    exclude:
+      # D-4(P2): framework4j-redis 传递引入 redisson-spring-boot-starter, 其 RedissonAutoConfigurationV2/V4
+      # 仅 @ConditionalOnClass 无开关, 端点取 spring.data.redis 默认值(localhost:6379), 不随
+      # framework4j.redis.datasources.* 的 host/port 覆盖 → 产品全链零 redisson 使用, 显式排除防误连默认 6379
+      - org.redisson.spring.starter.RedissonAutoConfigurationV2
+      - org.redisson.spring.starter.RedissonAutoConfigurationV4
   flyway:
     enabled: true
     locations: classpath:db/migration   # 脚本在 starter resources(与实体同源), app 合并 classpath 可见
@@ -37,6 +44,10 @@ framework4j:
       default:
         host: localhost
         port: 6379
+        # D-4（P2）: 本产品全链零 redisson 使用, 且其客户端端点不随本数据源 host/port 覆盖
+        # (恒落默认 127.0.0.1:6379) → 显式关闭, 防误连宿主机默认 6379
+        redisson:
+          enabled: false
         lettuce:
           pool:
             max-active: 50          # 默认 8 太小, 生产 50
@@ -50,6 +61,10 @@ framework4j:
         username: admin
         password: test@2026
         druid:
+          # D-3 修复：显式关 wall —— 出厂默认 filters=stat,wall,slf4j（framework4j DataSourceProperties$DruidConfig），
+          # wall 不识别 PG 方言（引擎领取的 FOR UPDATE OF d SKIP LOCKED / Flyway 部分索引 WHERE）→ 引擎扫描必炸；
+          # 如需 wall 请先验证引擎链路全通后再加回
+          filters: stat,slf4j
           initial-size: 10
           min-idle: 10
           max-active: 50          # 默认 20 太小, 生产 50
@@ -105,7 +120,11 @@ framework4j:
     nonce-ttl-seconds: 600              # nonce 10min 防重放
     nonce-key-prefix: notification4j:sig:nonce
     redis-name: default
-    path-patterns: ["/nfy/api/v1/runtime/**", "/nfy/api/v1/assets/runtime/**"]   # 对外 runtime API 强制签名(含 assets)
+    # D-1 修复：出厂不对 runtime 强制签名 —— SPA 与 S2S 共用 runtime 路径，嵌入面无 secret 可签，
+    # 强制签名会令消息中心 SPA 全拒 10101。S2S 对接需要时自行加回 pattern（密钥解析由本项目
+    # NfyTenantSecretProvider 提供，starter 已 @AutoConfigureBefore 排序修 D-2）：
+    # path-patterns: ["/nfy/api/v1/runtime/**", "/nfy/api/v1/assets-runtime/**"]
+    path-patterns: []
     exclude-path-patterns: []
   sensitive:
     enabled: true

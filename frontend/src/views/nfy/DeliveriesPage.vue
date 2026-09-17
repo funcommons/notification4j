@@ -8,6 +8,7 @@ import { NfyApiError } from '@/api/nfy/client'
 import { FcButton, FcSelect } from '@/components/sdk/form'
 import { FcTag } from '@/components/sdk/display'
 import { FcPagination } from '@/components/sdk/navigation'
+import { parseFwkTime } from '@/utils/fwkTime'
 import type { DeliveryItem } from '@/api/nfy'
 
 const channelTypeOptions = [
@@ -81,7 +82,8 @@ function onPageChange(p: number, s: number) {
   void load()
 }
 
-const fmtTime = (ts: number | null) => (ts ? new Date(ts).toLocaleString() : '')
+/** 后端时间为 Long→String 数字字符串（fwk 精度保护），必须经 parseFwkTime 归一 */
+const fmtTime = (v: DeliveryItem['created_at']) => parseFwkTime(v)?.toLocaleString() ?? ''
 
 /** DLV-002 人工重投：成功提示 + 刷新当前页；非 DEAD 10402 → 错误文案 */
 async function retry(item: DeliveryItem) {

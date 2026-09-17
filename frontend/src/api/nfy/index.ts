@@ -19,7 +19,7 @@ export interface MessageItem {
   type_code: string
   level: string
   read_status: string
-  created_at: number | null
+  created_at: number | string | null  // Long→String 契约：雪花毫秒以字符串到达（utils/fwkTime）
 }
 
 export interface MessageListResult {
@@ -45,7 +45,7 @@ export interface AnnouncementItem {
   content: string
   link_url: string
   need_confirm: number
-  published_at: number | null
+  published_at: number | string | null  // Long→String 契约（utils/fwkTime）
   my_status: 'NONE' | 'READ' | 'CONFIRMED'
 }
 
@@ -70,7 +70,7 @@ export interface ChannelItem {
   target: string
   status: string
   fail_count: number
-  last_verify_at: number | null
+  last_verify_at: number | string | null  // Long→String 契约（utils/fwkTime）
 }
 
 export const createChannelApi = (c: NfyClient) => ({
@@ -117,10 +117,10 @@ export interface DeliveryItem {
   title: string
   status: string
   retry_count: number
-  next_retry_at: number | null
+  next_retry_at: number | string | null  // Long→String 契约（utils/fwkTime）
   error_message: string | null
-  sent_at: number | null
-  created_at: number | null
+  sent_at: number | string | null  // Long→String 契约（utils/fwkTime）
+  created_at: number | string | null  // Long→String 契约：雪花毫秒以字符串到达（utils/fwkTime）
 }
 
 export interface DeliveryListResult {

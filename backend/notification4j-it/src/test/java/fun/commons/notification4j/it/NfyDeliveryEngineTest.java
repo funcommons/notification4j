@@ -270,6 +270,8 @@ class NfyDeliveryEngineTest {
         assertThat(done.getSentAt()).isNotNull();
         NfyaChannel ch = channelMapper.selectById(d.getChannelId());
         assertThat(ch.getFailCount()).isZero();
+        // ND-L5-01：投递成功即渠道可用性证据 → last_verify_at 回填（渠道离线插入时为 null）
+        assertThat(ch.getLastVerifyAt()).as("投递成功后 last_verify_at 非空").isNotNull();
     }
 
     @Test

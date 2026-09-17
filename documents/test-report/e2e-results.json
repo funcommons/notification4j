@@ -1,0 +1,2595 @@
+{
+  "config": {
+    "argv": [
+      "/opt/homebrew/Cellar/node/26.0.0/bin/node",
+      "/Users/justin/codes/funcommons/notification4j/frontend/node_modules/playwright/cli.js",
+      "test",
+      "-c",
+      "e2e-regression/playwright.config.ts"
+    ],
+    "configFile": "/Users/justin/codes/funcommons/notification4j/frontend/e2e-regression/playwright.config.ts",
+    "rootDir": "/Users/justin/codes/funcommons/notification4j/frontend/e2e-regression",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": "/Users/justin/codes/funcommons/notification4j/frontend/e2e-regression/global-setup.ts",
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/justin/codes/funcommons/notification4j/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/Users/justin/codes/funcommons/notification4j/frontend/e2e-regression",
+        "testIgnore": [],
+        "testMatch": [
+          "/l\\d-.*\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "../../documents/test-report/e2e-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.62.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "l1-auth.spec.ts",
+      "file": "l1-auth.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "L1 认证与开放接入线",
+          "file": "l1-auth.spec.ts",
+          "line": 13,
+          "column": 6,
+          "specs": [
+            {
+              "title": "L1-01 AUTH-001 平台 client_credentials 换 token 成功",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 90,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:28.715Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c8dfa18fde37caae1323-42f6302ab19c535c7337",
+              "file": "l1-auth.spec.ts",
+              "line": 20,
+              "column": 3
+            },
+            {
+              "title": "L1-02 AUTH-001 新建租户凭据换 token 端到端",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 93,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:29.079Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c8dfa18fde37caae1323-1fddde679d46afdcbc49",
+              "file": "l1-auth.spec.ts",
+              "line": 30,
+              "column": 3
+            },
+            {
+              "title": "L1-03 AUTH-001 错误 secret 拒绝",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 38,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:29.177Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c8dfa18fde37caae1323-e999a2653568a0156cbc",
+              "file": "l1-auth.spec.ts",
+              "line": 42,
+              "column": 3
+            },
+            {
+              "title": "L1-04 AUTH-001 防爆破：连错 5 次后锁定，正确凭据也被拒",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 55,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:29.218Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c8dfa18fde37caae1323-7e4f67c10272c1ce8bfb",
+              "file": "l1-auth.spec.ts",
+              "line": 51,
+              "column": 3
+            },
+            {
+              "title": "L1-05 PRK-001 注册码签发 + 列表脱敏",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 36,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:29.277Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c8dfa18fde37caae1323-b337ea533fe78474a99f",
+              "file": "l1-auth.spec.ts",
+              "line": 67,
+              "column": 3
+            },
+            {
+              "title": "L1-06 OPEN-001 注册码自助注册成功 → 新租户可认证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 29,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:29.318Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c8dfa18fde37caae1323-d6b13d189787e1bcfb98",
+              "file": "l1-auth.spec.ts",
+              "line": 82,
+              "column": 3
+            },
+            {
+              "title": "L1-07 OPEN-001 max_uses=1 注册码消费后二次注册拒绝（原子扣减）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 38,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:29.350Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c8dfa18fde37caae1323-0b36a7b74ffb372f71da",
+              "file": "l1-auth.spec.ts",
+              "line": 98,
+              "column": 3
+            },
+            {
+              "title": "L1-08 OPEN-001 max_uses=2 注册码恰好消费两次",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 38,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:29.393Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c8dfa18fde37caae1323-4ea924a040dd64ea46a1",
+              "file": "l1-auth.spec.ts",
+              "line": 114,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "l2-messages.spec.ts",
+      "file": "l2-messages.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "L2 站内消息线",
+          "file": "l2-messages.spec.ts",
+          "line": 14,
+          "column": 6,
+          "specs": [
+            {
+              "title": "L2-01 MSG-001 INAPP 发送成功（message_id/biz_no/receiver_count/inapp_saved）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 81,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:29.448Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a03ee6ca9d06f671c5c8-95ee91e8b8556b0aa25a",
+              "file": "l2-messages.spec.ts",
+              "line": 57,
+              "column": 3
+            },
+            {
+              "title": "L2-02 MSG-001 biz_no 幂等闸：同租户同 biz_no 二次发送 10401 拒绝",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 88,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:29.577Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a03ee6ca9d06f671c5c8-556e937914370511b03e",
+              "file": "l2-messages.spec.ts",
+              "line": 74,
+              "column": 3
+            },
+            {
+              "title": "L2-03 MSG-002/JOB-001 批量异步：提交返 job_id，轮询至 DONE 且成功数=30",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 447,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:29.668Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a03ee6ca9d06f671c5c8-68cde5b7106528fb89d7",
+              "file": "l2-messages.spec.ts",
+              "line": 91,
+              "column": 3
+            },
+            {
+              "title": "L2-04 MSG-004 Cursor 列表：limit 翻页/has_more/next_cursor 无重复；type_code 服务端过滤；keyword 为前端本地过滤边界",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 164,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:30.118Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a03ee6ca9d06f671c5c8-718a7b0c26e1e161218e",
+              "file": "l2-messages.spec.ts",
+              "line": 113,
+              "column": 3
+            },
+            {
+              "title": "L2-05 MSG-006 详情即已读 + MSG-007 未读数联动递减",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 62,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:30.286Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a03ee6ca9d06f671c5c8-925c1118ea716a88219f",
+              "file": "l2-messages.spec.ts",
+              "line": 160,
+              "column": 3
+            },
+            {
+              "title": "L2-06 MSG-009 撤回：已读/未读均可撤（ADR-0010 双条件 UPDATE），用户侧不可见+幂等",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 81,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:30.351Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a03ee6ca9d06f671c5c8-e9b671f73d97277b0906",
+              "file": "l2-messages.spec.ts",
+              "line": 185,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "l3-announcements.spec.ts",
+      "file": "l3-announcements.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "L3 公告线",
+          "file": "l3-announcements.spec.ts",
+          "line": 15,
+          "column": 6,
+          "specs": [
+            {
+              "title": "L3-01 ANN-001 平台公告(tenant 0)+租户公告合并生效列表，published_at 倒序，草稿不可见",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 99,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:30.448Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f2ae6e18374d6d20298d-ce2c9c8880f8ce8de8a4",
+              "file": "l3-announcements.spec.ts",
+              "line": 97,
+              "column": 3
+            },
+            {
+              "title": "L3-02 ANN-002 markRead 两次调用幂等，my_status→READ，unconfirmed 不因阅读变化",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 63,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:30.643Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f2ae6e18374d6d20298d-8ac509b01d7eaedee20d",
+              "file": "l3-announcements.spec.ts",
+              "line": 125,
+              "column": 3
+            },
+            {
+              "title": "L3-03 ANN-003 confirm 幂等 + unconfirmed_count 恰好减 1",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 80,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:30.709Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f2ae6e18374d6d20298d-22cdf557ceae567795ff",
+              "file": "l3-announcements.spec.ts",
+              "line": 145,
+              "column": 3
+            },
+            {
+              "title": "L3-04 AAN 租户公告管理流：DRAFT→发布→runtime 可见；biz_no 幂等 10401；下线即不可见",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 65,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:30.792Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f2ae6e18374d6d20298d-97481ebdf603b51bd37f",
+              "file": "l3-announcements.spec.ts",
+              "line": 166,
+              "column": 3
+            },
+            {
+              "title": "L3-05 PAN 平台公告确认回执跨域口径（第 28 步修复回归）：平台侧 detail confirm_count≥1",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 72,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:30.861Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f2ae6e18374d6d20298d-d1e084c287b63525fafc",
+              "file": "l3-announcements.spec.ts",
+              "line": 196,
+              "column": 3
+            },
+            {
+              "title": "L3-06 PTE-005 mandatory 唯一入口：仅平台域可设，租户域接口不暴露",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 54,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:30.936Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "f2ae6e18374d6d20298d-a0363a43b2346273912c",
+              "file": "l3-announcements.spec.ts",
+              "line": 229,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "l4-channels-subscriptions.spec.ts",
+      "file": "l4-channels-subscriptions.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "L4 渠道与订阅线",
+          "file": "l4-channels-subscriptions.spec.ts",
+          "line": 44,
+          "column": 6,
+          "specs": [
+            {
+              "title": "L4-01 CHN-001 自注册渠道成功（PENDING 落库不发验证消息）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 57,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.003Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9b6e0c1c5a0dc98fceb-08cee7d5201c9e26908f",
+              "file": "l4-channels-subscriptions.spec.ts",
+              "line": 75,
+              "column": 3
+            },
+            {
+              "title": "L4-01b IM 官方域名注册（环境敏感）：代理 fake-IP DNS 命中 SSRF 禁用集 → 10609",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 27,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.119Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9b6e0c1c5a0dc98fceb-3cdf54f5a313a5b9eff0",
+              "file": "l4-channels-subscriptions.spec.ts",
+              "line": 90,
+              "column": 3
+            },
+            {
+              "title": "L4-02 SSRF 防线：明文/内网/非白名单/非443端口 → 10609",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 36,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.149Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9b6e0c1c5a0dc98fceb-27b54cd3cfd33da8aeea",
+              "file": "l4-channels-subscriptions.spec.ts",
+              "line": 115,
+              "column": 3
+            },
+            {
+              "title": "L4-03 非法渠道类型/空 target/非法邮箱/名称超长 → 10100",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 46,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.188Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9b6e0c1c5a0dc98fceb-1cd946bd5e988d1bfa8e",
+              "file": "l4-channels-subscriptions.spec.ts",
+              "line": 136,
+              "column": 3
+            },
+            {
+              "title": "L4-04 CHN-002/003 列表脱敏 + 验证语义（无凭据 10604 保持 PENDING）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 46,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.237Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9b6e0c1c5a0dc98fceb-cc0bcb12aea0c5a5d860",
+              "file": "l4-channels-subscriptions.spec.ts",
+              "line": 155,
+              "column": 3
+            },
+            {
+              "title": "L4-05 CHN-004 patch 改名/启停流转",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 46,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.285Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9b6e0c1c5a0dc98fceb-a778be2dab404c2f450d",
+              "file": "l4-channels-subscriptions.spec.ts",
+              "line": 182,
+              "column": 3
+            },
+            {
+              "title": "L4-06 CHN-005 删除渠道 + 防探测（删后同码操作 10400）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 45,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.335Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9b6e0c1c5a0dc98fceb-bd3c474d473c51ace7be",
+              "file": "l4-channels-subscriptions.spec.ts",
+              "line": 204,
+              "column": 3
+            },
+            {
+              "title": "L4-07 ACH 公共渠道：scope=TENANT 隔离 + 验证/管理",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 56,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.384Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9b6e0c1c5a0dc98fceb-f547404739f1936993a8",
+              "file": "l4-channels-subscriptions.spec.ts",
+              "line": 218,
+              "column": 3
+            },
+            {
+              "title": "L4-08 SUB-001 矩阵三段（types/available_channels/items）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 39,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.443Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9b6e0c1c5a0dc98fceb-ccebf1f9caf141c33f8a",
+              "file": "l4-channels-subscriptions.spec.ts",
+              "line": 265,
+              "column": 3
+            },
+            {
+              "title": "L4-09 SUB-002 PUT 全量替换（多类型×渠道条目，幂等，INAPP 哨兵恒首位）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 106,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.486Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9b6e0c1c5a0dc98fceb-690e8f5c55e327fab9c7",
+              "file": "l4-channels-subscriptions.spec.ts",
+              "line": 289,
+              "column": 3
+            },
+            {
+              "title": "L4-10 强制集校验：有实例须保留（10606），无实例豁免",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 61,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.595Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9b6e0c1c5a0dc98fceb-b17b849c830f59ccacf8",
+              "file": "l4-channels-subscriptions.spec.ts",
+              "line": 327,
+              "column": 3
+            },
+            {
+              "title": "L4-11 SUB 非法输入：10101 / 10601 / 10400",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 62,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.660Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9b6e0c1c5a0dc98fceb-aca2cee73576780a4cc0",
+              "file": "l4-channels-subscriptions.spec.ts",
+              "line": 344,
+              "column": 3
+            },
+            {
+              "title": "L4-12 quiet_hours 保存/回显/缺省重置/非法 10100",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 68,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.726Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c9b6e0c1c5a0dc98fceb-950635da40b2bdb2c671",
+              "file": "l4-channels-subscriptions.spec.ts",
+              "line": 361,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "l5-engine.spec.ts",
+      "file": "l5-engine.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "L5 外发引擎线",
+          "file": "l5-engine.spec.ts",
+          "line": 45,
+          "column": 6,
+          "specs": [
+            {
+              "title": "L5-00 修复回归 ND-L5-01：EMAIL 渠道纯 API 通路 ENABLED 可达（原 P1 缺陷）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 72,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.806Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "de43424d87788060b77b-9823b3d1cf4f31f365d7",
+              "file": "l5-engine.spec.ts",
+              "line": 101,
+              "column": 3
+            },
+            {
+              "title": "L5-01 外发成功链：类型默认 EMAIL → 计划 → 引擎 → SMTP 收包",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 459,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:31.930Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "de43424d87788060b77b-689e4929fe632bf74dbd",
+              "file": "l5-engine.spec.ts",
+              "line": 129,
+              "column": 3
+            },
+            {
+              "title": "L5-02 失败重试退避：454×2 → FAILED(1,2) 递进 → 恢复后 SENT",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8587,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:32.395Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "de43424d87788060b77b-015673b3a8d91d6770aa",
+              "file": "l5-engine.spec.ts",
+              "line": 158,
+              "column": 3
+            },
+            {
+              "title": "L5-03 持续失败 → DEAD（retry_count=4）→ DLV-002 人工重投成功",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 19648,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:19:40.985Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "de43424d87788060b77b-b716c6b4dc2ea9cbf71e",
+              "file": "l5-engine.spec.ts",
+              "line": 196,
+              "column": 3
+            },
+            {
+              "title": "L5-04 quiet_hours：静默窗内投递推迟（PENDING + next_retry_at=窗结束）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 54,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:00.636Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "de43424d87788060b77b-e6661af2a29ba30f0c29",
+              "file": "l5-engine.spec.ts",
+              "line": 224,
+              "column": 3
+            },
+            {
+              "title": "L5-05 渠道熔断前夜：4 次失败（未达阈值不熔断）→ DEAD",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 18772,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:00.695Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "de43424d87788060b77b-94e59a7da942c2da81e0",
+              "file": "l5-engine.spec.ts",
+              "line": 250,
+              "column": 3
+            },
+            {
+              "title": "L5-06 渠道熔断：第 5 次失败 → DISABLED + 属主站内信兜底 + EMAIL 熔断重启用=重新验证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 564,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:19.470Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "de43424d87788060b77b-0e9c1445e3348db5de21",
+              "file": "l5-engine.spec.ts",
+              "line": 271,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "l6-platform.spec.ts",
+      "file": "l6-platform.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "L6 平台治理与租户生命周期线",
+          "file": "l6-platform.spec.ts",
+          "line": 16,
+          "column": 6,
+          "specs": [
+            {
+              "title": "L6-01 PTE-001 建租户：secret 仅此一次返回 + 响应不含内部数字 id + 可认证",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 69,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.052Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9b8a7a18be16561b4bc2-ad5b8b8d96e1ca8aa141",
+              "file": "l6-platform.spec.ts",
+              "line": 29,
+              "column": 3
+            },
+            {
+              "title": "L6-02 PTE-001 email 唯一约束：同邮箱重复创建 10401 拒绝",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 21,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.168Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9b8a7a18be16561b4bc2-461cc00141b08678bf08",
+              "file": "l6-platform.spec.ts",
+              "line": 53,
+              "column": 3
+            },
+            {
+              "title": "L6-03 PTE-002 配置修改 + 详情 email 脱敏 + 列表可见",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 46,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.193Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9b8a7a18be16561b4bc2-e1e2a04e75b655406d25",
+              "file": "l6-platform.spec.ts",
+              "line": 64,
+              "column": 3
+            },
+            {
+              "title": "L6-04 PTE-004 SUSPEND：新认证 401 同码防探测 + 存量 token 双面 10201 阻断",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 46,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.244Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9b8a7a18be16561b4bc2-b21435191c59d7588942",
+              "file": "l6-platform.spec.ts",
+              "line": 85,
+              "column": 3
+            },
+            {
+              "title": "L6-05 PTE-004 RESUME → ACTIVE：认证恢复",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 27,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.295Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9b8a7a18be16561b4bc2-4bebf1ac62ddcd27cbc5",
+              "file": "l6-platform.spec.ts",
+              "line": 106,
+              "column": 3
+            },
+            {
+              "title": "L6-06 PTE-003 reset-secret：新 secret 立即生效 + 旧 secret 24h 宽限（§5.5 双版本过渡）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 32,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.325Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9b8a7a18be16561b4bc2-75e8f060425c73b76e64",
+              "file": "l6-platform.spec.ts",
+              "line": 121,
+              "column": 3
+            },
+            {
+              "title": "L6-07 PTE-004 CLOSE 终态：再迁移 10402 + 认证不可恢复 + 非法 action 10100",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 63,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.360Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9b8a7a18be16561b4bc2-803307422640fcafa2b8",
+              "file": "l6-platform.spec.ts",
+              "line": 138,
+              "column": 3
+            },
+            {
+              "title": "L6-08 PST-001 平台跨租户概览：造数据后字段齐全与计数单调合理",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 116,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.427Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9b8a7a18be16561b4bc2-6a09eb7d16410447142d",
+              "file": "l6-platform.spec.ts",
+              "line": 159,
+              "column": 3
+            },
+            {
+              "title": "L6-09 平台域闸：租户 token 打平台面端点 → 403 拒绝",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 30,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.546Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9b8a7a18be16561b4bc2-9a685a485261229fc834",
+              "file": "l6-platform.spec.ts",
+              "line": 191,
+              "column": 3
+            },
+            {
+              "title": "L6-10 PTE-005 强制订阅唯一入口：平台域 type-mandatory 设置 + 参数/租户校验",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 44,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.581Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "9b8a7a18be16561b4bc2-29d7b254ccff8d521b3e",
+              "file": "l6-platform.spec.ts",
+              "line": 206,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "l7-admin.spec.ts",
+      "file": "l7-admin.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "L7 Admin 运营治理线",
+          "file": "l7-admin.spec.ts",
+          "line": 18,
+          "column": 6,
+          "specs": [
+            {
+              "title": "L7-01 TYP-001 建类型：default_channels=[INAPP] 落库并列表回显",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 64,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.649Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "37186742c6ff8374ab82-1ecb6253c57cd80e7e29",
+              "file": "l7-admin.spec.ts",
+              "line": 34,
+              "column": 3
+            },
+            {
+              "title": "L7-02 TYP-002 更新类型 + 非法枚举 10100",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 49,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.764Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "37186742c6ff8374ab82-8cf17db7a9774a731524",
+              "file": "l7-admin.spec.ts",
+              "line": 53,
+              "column": 3
+            },
+            {
+              "title": "L7-03 TYP→MSG 链路：类型发消息 → 站内信落库/未读/详情即已读",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 62,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.818Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "37186742c6ff8374ab82-0c6ac4f11dda97366273",
+              "file": "l7-admin.spec.ts",
+              "line": 71,
+              "column": 3
+            },
+            {
+              "title": "L7-04 ACH-001 注册公共渠道（EMAIL）→ 列表可见且 target 脱敏",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 30,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.885Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "37186742c6ff8374ab82-5abcd0ca1774c2634d9a",
+              "file": "l7-admin.spec.ts",
+              "line": 98,
+              "column": 3
+            },
+            {
+              "title": "L7-05 ACH 非法 target 拒绝：渠道枚举 10100 / SSRF 白名单 10609 / 邮箱格式 10100",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 40,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.919Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "37186742c6ff8374ab82-ed2de1089e4fcc25e111",
+              "file": "l7-admin.spec.ts",
+              "line": 114,
+              "column": 3
+            },
+            {
+              "title": "L7-06 DLV-001 投递查询：租户隔离 total + status/channel_type/biz_no 过滤契约",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 48,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:20.964Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "37186742c6ff8374ab82-dc03fb1b9f7a5a1a0885",
+              "file": "l7-admin.spec.ts",
+              "line": 132,
+              "column": 3
+            },
+            {
+              "title": "L7-07 SEC-001 密钥轮换：状态脱敏 → rotate → prev 宽限字段 → 短 secret 10100",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 41,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:21.018Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "37186742c6ff8374ab82-f5efad23e86c84682577",
+              "file": "l7-admin.spec.ts",
+              "line": 150,
+              "column": 3
+            },
+            {
+              "title": "L7-08 STAT-001 租户概览：created_at 时间基计数 + 空数据日成功率 0",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 26,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:21.062Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "37186742c6ff8374ab82-3e717098db421ae0ffb7",
+              "file": "l7-admin.spec.ts",
+              "line": 178,
+              "column": 3
+            },
+            {
+              "title": "L7-09 TPL-001/002 模板创建/列表/详情/更新 + code 租户内唯一 10401",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 53,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:21.095Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "37186742c6ff8374ab82-b696bbc97d3846abe7c0",
+              "file": "l7-admin.spec.ts",
+              "line": 192,
+              "column": 3
+            },
+            {
+              "title": "L7-10 TPL-003 渲染预览：全参渲染 + 渠道覆盖 + 缺参 10603 + 未知模板 10400",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 38,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:21.152Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "37186742c6ff8374ab82-623367a16150a4ec768d",
+              "file": "l7-admin.spec.ts",
+              "line": 219,
+              "column": 3
+            },
+            {
+              "title": "L7-11 模板发送渲染时机观察：直发路径内容透传（渲染仅 preview，V1.1 模板发送未接线）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 38,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:21.194Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "37186742c6ff8374ab82-9073759e562945437e3f",
+              "file": "l7-admin.spec.ts",
+              "line": 240,
+              "column": 3
+            },
+            {
+              "title": "L7-12 OPS 健康检查：免 token 可达，db/redis 全 UP",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 21,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:21.235Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "37186742c6ff8374ab82-a93e2509259d3fb0b7ad",
+              "file": "l7-admin.spec.ts",
+              "line": 255,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "l8-frontend.spec.ts",
+      "file": "l8-frontend.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "L8 前端消息中心线",
+          "file": "l8-frontend.spec.ts",
+          "line": 78,
+          "column": 6,
+          "specs": [
+            {
+              "title": "L8-01 嵌入握手全链：host 页 NFY_TOKEN → 消息列表渲染种子数据",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 252,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:21.273Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2db0efed63ba1d20249e-90838fc0a8bd42cff687",
+              "file": "l8-frontend.spec.ts",
+              "line": 83,
+              "column": 3
+            },
+            {
+              "title": "L8-02 五页导航标志性元素 + SPA fallback",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 529,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:21.529Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2db0efed63ba1d20249e-7aac9d0025e92ac7bf4a",
+              "file": "l8-frontend.spec.ts",
+              "line": 108,
+              "column": 3
+            },
+            {
+              "title": "L8-03 公告页展示与已读/确认回执（UI 操作 + API 复核）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 672,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:22.062Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2db0efed63ba1d20249e-da17e73e5eeecb89383a",
+              "file": "l8-frontend.spec.ts",
+              "line": 165,
+              "column": 3
+            },
+            {
+              "title": "L8-04 铃铛未读角标 = unread-count total（bell 单页壳经真实宿主页 src 切换嵌入）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 410,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:22.739Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2db0efed63ba1d20249e-79039da0c60314067cf3",
+              "file": "l8-frontend.spec.ts",
+              "line": 206,
+              "column": 3
+            },
+            {
+              "title": "L8-05 消息已读联动：UI 标为已读 → 角标递减 + 列表样式切换 + API 复核",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 637,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:23.153Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2db0efed63ba1d20249e-fa863558fef7e8d334a5",
+              "file": "l8-frontend.spec.ts",
+              "line": 247,
+              "column": 3
+            },
+            {
+              "title": "L8-06 撤回展示：API 撤回已发消息 → UI 刷新后不再展示",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 270,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:23.794Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2db0efed63ba1d20249e-6913b7f44663f3633a2f",
+              "file": "l8-frontend.spec.ts",
+              "line": 280,
+              "column": 3
+            },
+            {
+              "title": "L8-07 origin 白名单拒绝：非白名单父页投递 NFY_TOKEN 不被接受",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2143,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:24.068Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2db0efed63ba1d20249e-5ad127b51355d5eaa65e",
+              "file": "l8-frontend.spec.ts",
+              "line": 310,
+              "column": 3
+            },
+            {
+              "title": "L8-08 无效 token 表现：数据面鉴权失败 → 会话失效重连提示（F-2 修复后行为）",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 189,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-09-17T23:20:26.215Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2db0efed63ba1d20249e-bb6133319c9c0e259a09",
+              "file": "l8-frontend.spec.ts",
+              "line": 352,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-17T23:19:28.443Z",
+    "duration": 57996.534,
+    "expected": 70,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

@@ -374,6 +374,29 @@ class NfyChannelFlowTest {
                 .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8), 10604);
     }
 
+    @Test
+    void email_pending_patch_enabled_succeeds_nd_l5_01() throws Exception {
+        // ND-L5-01 修复回归：EMAIL 渠道纯 API 通路可达 ENABLED——PENDING 直启（豁免 last_verify_at 前置，
+        // 豁免依据=ChannelVerifier 10604 文案契约「首次投递时校验」）；IM 未验证直启仍 10610
+        // （patch_pending_enable_rejected_10610_and_delete 已钉）。
+        String jwt = token(TENANT_A, "secret-a");
+        String channelId = extract(register(jwt, "u_em_en", "{\"channel_type\":\"EMAIL\",\"name\":\"邮箱直启\","
+                + "\"target\":\"direct-enable@example.com\"}"), "channel_id");
+        String patched = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/nfy/api/v1/runtime/channels/" + channelId)
+                        .header("Authorization", "Bearer " + jwt).header("X-User-Id", "u_em_en")
+                        .contentType("application/json").content("{\"status\":\"ENABLED\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        assertThatCode0(patched);
+        org.assertj.core.api.Assertions.assertThat(patched).contains("\"status\":\"ENABLED\"");
+        // 列表复核：状态真落库（后续投递计划按 ENABLED 过滤即可达，外发链闭合）
+        String list = mvc.perform(get("/nfy/api/v1/runtime/channels")
+                        .header("Authorization", "Bearer " + jwt).header("X-User-Id", "u_em_en"))
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        org.assertj.core.api.Assertions.assertThat(list).contains("\"status\":\"ENABLED\"");
+    }
+
     private void expectCode(String body, int code) {
         org.assertj.core.api.Assertions.assertThat(body).contains("\"code\":" + code);
     }

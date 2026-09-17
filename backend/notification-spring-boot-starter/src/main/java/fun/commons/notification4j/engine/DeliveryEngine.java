@@ -202,9 +202,12 @@ public class DeliveryEngine implements SmartLifecycle {
                     .set(NfyaDelivery::getSentAt, OffsetDateTime.now())
                     .set(NfyaDelivery::getErrorMessage, ""));
             if (updated > 0) {
+                // ND-L5-01：清 fail_count 同时回填 last_verify_at——投递成功即渠道可用性证据，
+                // 语义向 verify() 成功路径对齐（EMAIL「首次投递时校验」由此取得已验证时点）
                 channelMapper.update(null, new LambdaUpdateWrapper<NfyaChannel>()
                         .eq(NfyaChannel::getId, ch.getId())
-                        .set(NfyaChannel::getFailCount, 0));
+                        .set(NfyaChannel::getFailCount, 0)
+                        .set(NfyaChannel::getLastVerifyAt, OffsetDateTime.now()));
             }
             return;
         }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 消息中心完整壳（/nfy/tenant/app/*，PRD F-EMB：侧栏五页，V1.2 增投递）。
 // 嵌入模式自持 token（postMessage 握手），不依赖 benefit 登录态。
+import { computed } from 'vue'
 import { provideNfy } from '@/api/nfy/nfyContext'
 
 const props = defineProps<{ baseUrl?: string; origins?: string }>()
@@ -10,6 +11,14 @@ const ctx = provideNfy({
   allowedOrigins: (props.origins ?? import.meta.env.VITE_NFY_PARENT_ORIGINS ?? 'http://localhost:5173,http://localhost:3000')
     .split(',')
     .map((s: string) => s.trim()),
+})
+
+// F-2：占位区分「等待握手」「会话失效重连」——无效/过期 token 触发数据面
+// 鉴权失败（401/信封 102xx）后回 waiting 重握手，呈现明确连接态而非误导空态
+const placeholder = computed(() => {
+  const waiting = ctx.handshake.status.value === 'waiting'
+  if (ctx.authError.value) return waiting ? '会话已失效，正在重新连接…' : '会话已失效，请刷新'
+  return waiting ? '正在连接…' : '会话已过期，请刷新'
 })
 </script>
 
@@ -32,7 +41,7 @@ const ctx = provideNfy({
     </template>
     <div v-else class="nfy-placeholder">
       <!-- 契约：token 缺失/过期 → 静默占位，不打断父页；握手自动重试 -->
-      <span>{{ ctx.handshake.status.value === 'waiting' ? '正在连接…' : '会话已过期，请刷新' }}</span>
+      <span>{{ placeholder }}</span>
     </div>
   </div>
 </template>

@@ -4,9 +4,11 @@ import { FcTag } from '@/components/sdk/display'
 // 公告页（API-ANN-001/002/003）：平台+本租户合并列表，need_confirm 显示「我知道了」
 import { ref, onMounted } from 'vue'
 import { useNfy } from '@/api/nfy/nfyContext'
+import { parseFwkTime } from '@/utils/fwkTime'
+import type { AnnouncementItem } from '@/api/nfy'
 
-const { apis } = useNfy()
-const list = ref<import('@/api/nfy').AnnouncementItem[]>([])
+const { apis, authError } = useNfy()
+const list = ref<AnnouncementItem[]>([])
 const cursor = ref<string | null>(null)
 const hasMore = ref(false)
 const loading = ref(false)
@@ -23,12 +25,15 @@ async function load(reset = false) {
   }
 }
 
-async function markRead(a: import('@/api/nfy').AnnouncementItem) {
+/** 后端时间为 Long→String 数字字符串（fwk 精度保护），必须经 parseFwkTime 归一 */
+const fmtTime = (v: AnnouncementItem['published_at']) => parseFwkTime(v)?.toLocaleString() ?? ''
+
+async function markRead(a: AnnouncementItem) {
   await apis.announcements.markRead(a.announcement_id)
   if (a.my_status === 'NONE') a.my_status = 'READ'
 }
 
-async function confirm(a: import('@/api/nfy').AnnouncementItem) {
+async function confirm(a: AnnouncementItem) {
   await apis.announcements.confirm(a.announcement_id)
   a.my_status = 'CONFIRMED'
 }
@@ -48,7 +53,7 @@ onMounted(() => void load(true))
         </header>
         <p>{{ a.content }}</p>
         <footer>
-          <span class="time">{{ a.published_at ? new Date(a.published_at).toLocaleString() : '' }}</span>
+          <span class="time">{{ fmtTime(a.published_at) }}</span>
           <FcButton v-if="a.my_status === 'NONE'" variant="text" size="sm" @click="markRead(a)">标为已读</FcButton>
           <FcButton v-if="a.need_confirm === 1 && a.my_status !== 'CONFIRMED'" variant="primary" size="sm" @click="confirm(a)">
             我知道了
@@ -56,7 +61,9 @@ onMounted(() => void load(true))
           <FcTag v-else-if="a.my_status === 'CONFIRMED'" color="success">已确认</FcTag>
         </footer>
       </li>
-      <li v-if="!list.length && !loading" class="empty">暂无公告</li>
+      <!-- F-2：会话失效时显示重连提示，不呈现误导性「暂无公告」空态 -->
+      <li v-if="!list.length && !loading && authError" class="empty auth-error">会话已失效，正在重新连接…</li>
+      <li v-else-if="!list.length && !loading" class="empty">暂无公告</li>
     </ul>
     <FcButton v-if="hasMore" variant="secondary" size="sm" :loading="loading" @click="load()">加载更多</FcButton>
   </section>
@@ -71,4 +78,5 @@ h2 { margin: 0 0 12px; }
 .list li footer { display: flex; gap: 8px; align-items: center; }
 .time { color: var(--el-text-color-secondary); font-size: 12px; margin-right: auto; }
 .empty { text-align: center; color: var(--el-text-color-secondary); }
+.empty.auth-error { color: var(--el-color-warning); }
 </style>

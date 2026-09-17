@@ -159,6 +159,11 @@ class DeliveryEngineTest {
                 ArgumentCaptor.forClass(LambdaUpdateWrapper.class);
         verify(channelMapper).update(isNull(), chCap.capture());
         assertThat(chCap.getValue().getParamNameValuePairs().containsValue(0)).isTrue(); // fail_count 清零
+        // ND-L5-01：投递成功即渠道可用性证据 → last_verify_at 同步回填（语义对齐 verify() 成功路径）
+        assertThat(chCap.getValue().getSqlSet()).contains("last_verify_at=");
+        List<OffsetDateTime> chTimes = timesOf(chCap.getValue());
+        assertThat(chTimes).hasSize(1); // 仅 last_verify_at，无多余时间参数
+        assertThat(chTimes.get(0)).isCloseTo(OffsetDateTime.now(), within(5, ChronoUnit.SECONDS));
     }
 
     @Test

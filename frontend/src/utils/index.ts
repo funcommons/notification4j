@@ -125,6 +125,7 @@ export function getFirstChar(name: string | undefined | null): string {
 }
 // Barrel re-exports — 子模块可通过 @/utils 统一导入
 export * from './date'
+export * from './fwkTime'
 export * from './download'
 export * from './errorHandler'
 export * from './colorHash'

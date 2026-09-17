@@ -62,6 +62,14 @@ java -jar notification4j-app/target/notification4j-app-1.0.0.jar
   `/nfy/api/**`、`/nfy/open/**`、`/nfy/platform/api/**` 优先，静态转发永不覆盖，未映射 API 路径照常 404。
 - app 的 `application.yml` 里 Flyway 独立 datasource（绕 Druid Wall）指向 `localhost:5432/notification4j`，
   生产经 `spring.flyway.*` / `framework4j.datasource.datasources.default.*` 环境变量覆盖。
+- **安全面出厂默认**（2026-09-18 验收回归修复轮，详见 documents/test-report/统一测试报告.md §八）：
+  - `framework4j.signature.path-patterns=[]`——SPA 与 S2S 共用 `/nfy/api/v1/runtime/**`，SPA 端无租户 secret
+    无法签名，出厂不对 runtime 强制签名；S2S 需要防重放时把 runtime pattern 加回（yml 注释有示例），
+    密钥解析由内置 `NfyTenantSecretProvider` 提供（已排序先于 fwk4j InMemory 兜底注册）。
+  - druid `filters: stat,slf4j`——wall 不兼容 PG 方言（`FOR UPDATE OF d SKIP LOCKED`、部分索引谓词），
+    开启会拦死外发引擎与 Flyway；如需 wall 请先验证这两条链路。
+  - `spring.autoconfigure.exclude` 排除传递引入的 redisson-spring-boot-starter（其端点取
+    `spring.data.redis` 默认 6379，不随 `framework4j.redis` 覆盖）。
 
 ### 嵌入接入形态（业务方引 starter）
 

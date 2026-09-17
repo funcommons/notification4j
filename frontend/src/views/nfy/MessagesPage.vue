@@ -3,14 +3,19 @@ import { FcButton } from '@/components/sdk/form'
 // 消息页（API-MSG-004/006/007；PRD：未读加粗+等级色标+已读操作，Cursor 加载更多）
 import { ref, onMounted } from 'vue'
 import { useNfy } from '@/api/nfy/nfyContext'
+import { parseFwkTime } from '@/utils/fwkTime'
+import type { MessageItem } from '@/api/nfy'
 
-const { apis } = useNfy()
-const list = ref<import('@/api/nfy').MessageItem[]>([])
+const { apis, authError } = useNfy()
+const list = ref<MessageItem[]>([])
 const cursor = ref<string | null>(null)
 const hasMore = ref(false)
 const loading = ref(false)
 const readFilter = ref<'' | 'UNREAD' | 'READ'>('')
 const unread = ref(0)
+
+/** 后端时间为 Long→String 数字字符串（fwk 精度保护），必须经 parseFwkTime 归一 */
+const fmtTime = (v: MessageItem['created_at']) => parseFwkTime(v)?.toLocaleString() ?? ''
 
 async function load(reset = false) {
   loading.value = true
@@ -32,7 +37,7 @@ async function refreshUnread() {
   unread.value = (await apis.messages.unreadCount()).unread_count
 }
 
-async function markRead(item: import('@/api/nfy').MessageItem) {
+async function markRead(item: MessageItem) {
   await apis.messages.markRead({ message_ids: [item.message_id] })
   item.read_status = 'READ'
   await refreshUnread()
@@ -57,10 +62,12 @@ onMounted(() => {
     <ul class="list" v-loading="loading">
       <li v-for="item in list" :key="item.message_id" :class="{ unread: item.read_status === 'UNREAD', [`lv-${item.level}`]: true }">
         <span class="title">{{ item.title }}</span>
-        <span class="meta">{{ item.type_code }} · {{ new Date(item.created_at ?? 0).toLocaleString() }}</span>
+        <span class="meta">{{ item.type_code }} · {{ fmtTime(item.created_at) }}</span>
         <FcButton v-if="item.read_status === 'UNREAD'" variant="text" size="sm" @click="markRead(item)">标为已读</FcButton>
       </li>
-      <li v-if="!list.length && !loading" class="empty">暂无消息</li>
+      <!-- F-2：会话失效时显示重连提示，不呈现误导性「暂无消息」空态 -->
+      <li v-if="!list.length && !loading && authError" class="empty auth-error">会话已失效，正在重新连接…</li>
+      <li v-else-if="!list.length && !loading" class="empty">暂无消息</li>
     </ul>
     <footer v-if="hasMore">
       <FcButton variant="secondary" size="sm" :loading="loading" @click="load()">加载更多</FcButton>
@@ -78,5 +85,6 @@ onMounted(() => {
 .list li.lv-IMPORTANT .title { color: var(--el-color-warning); }
 .meta { color: var(--el-text-color-secondary); font-size: 12px; }
 .empty { justify-content: center; color: var(--el-text-color-secondary); }
+.empty.auth-error { color: var(--el-color-warning); }
 footer { text-align: center; padding: 12px; }
 </style>

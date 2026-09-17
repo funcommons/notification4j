@@ -31,6 +31,13 @@ export interface NfyClientOptions {
   baseUrl: string
   getToken: () => string
   getUserId: () => string
+  /**
+   * 鉴权类失败回调（F-2）：HTTP 401 或信封 code∈fwk ApiCode 102xx「认证与账号类」段
+   * （10200 未认证/10201 过期/10202 无效/10205 踢出/10207 格式错误/10208 注销…，
+   * 服务端契约 §2.2：认证失败统一 HTTP 200 信封）。业务类失败（403 域闸、10100
+   * 参数、103xx 权限、104xx 业务规则）不触发。可省略（向后兼容，维持原行为）。
+   */
+  onAuthExpired?: (e: NfyApiError) => void
   /** 测试注入口（axios adapter） */
   adapter?: AxiosRequestConfig['adapter']
   timeoutMs?: number
@@ -41,6 +48,15 @@ export interface NfyEnvelope<T> {
   message: string
   data: T
   error: NfyFieldError[] | null
+}
+
+/**
+ * 鉴权类失败判定（F-2）：HTTP 401（网关/代理层）或 fwk ApiCode 102xx 认证与账号类段。
+ * 刻意排除业务 403（域闸 SecurityException→HTTP 403）与 103xx 权限类——
+ * 那些不是 token 失效，不应触发重握手。
+ */
+export function isAuthExpiredCode(code: number): boolean {
+  return code === 401 || (code >= 10200 && code < 10300)
 }
 
 export function createNfyClient(options: NfyClientOptions) {
@@ -58,6 +74,14 @@ export function createNfyClient(options: NfyClientOptions) {
     return config
   })
 
+  function toNfyError(e: unknown): NfyApiError {
+    if (e instanceof NfyApiError) return e
+    if (axios.isAxiosError(e) && e.response) {
+      return new NfyApiError(e.response.status, `HTTP ${e.response.status}`)
+    }
+    return new NfyApiError(-1, (e as Error).message)
+  }
+
   async function unwrap<T>(p: Promise<{ data: NfyEnvelope<T> }>): Promise<T> {
     try {
       const resp = await p
@@ -67,11 +91,9 @@ export function createNfyClient(options: NfyClientOptions) {
       }
       return envelope.data
     } catch (e) {
-      if (e instanceof NfyApiError) throw e
-      if (axios.isAxiosError(e) && e.response) {
-        throw new NfyApiError(e.response.status, `HTTP ${e.response.status}`)
-      }
-      throw new NfyApiError(-1, (e as Error).message)
+      const err = toNfyError(e)
+      if (options.onAuthExpired && isAuthExpiredCode(err.code)) options.onAuthExpired(err)
+      throw err
     }
   }
 

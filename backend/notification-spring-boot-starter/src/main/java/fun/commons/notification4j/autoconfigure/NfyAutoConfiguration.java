@@ -2,6 +2,7 @@ package fun.commons.notification4j.autoconfigure;
 
 import fun.commons.notification4j.properties.NfyProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -24,8 +25,13 @@ import org.springframework.context.annotation.Primary;
  * subscriptions、announcements 控制器（auth 端点由 framework4j-tenant 的 tenant.auth.enabled 提供，
  * 独立部署形态）——嵌套于 NfyDataConfig 内：data 闸关闭时 API 一并缺席（见下方 warn Bean）；
  * 嵌入形态（enable-api=false，默认）仅装配 local service/remote client。
+ *
+ * <p>签名密钥装配排序（D-2 修复）：{@code before = SignatureAutoConfiguration}（fwk4j-signature，
+ * 字符串形式避免编译依赖）——否则类名字典序 fwk4j 先行，其 InMemorySecretProvider 兜底先注册，
+ * 本项目 provider 的条件判断让位 → 签名调用全拒 10200（NfySignatureFaceTest 活体复现）。
  */
 @AutoConfiguration(after = com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration.class)
+@AutoConfigureBefore(name = "fun.commons.framework4j.signature.config.SignatureAutoConfiguration")
 @EnableConfigurationProperties(NfyProperties.class)
 public class NfyAutoConfiguration {
 
@@ -128,8 +134,10 @@ public class NfyAutoConfiguration {
     @ConditionalOnProperty(prefix = "nfy.data", name = "enabled", havingValue = "true", matchIfMissing = true)
     static class NfyDataConfig {
 
+        // D-2 修复：不加 @ConditionalOnMissingBean —— 本 provider 即 notification4j 确定性实现
+        // （tenant 密钥来自 nfya_tenant），必须先于 fwk4j 兜底（InMemorySecretProvider）注册；
+        // 类上 @AutoConfigureBefore(SignatureAutoConfiguration) 保证排序，业务方同名 Bean 仍可覆盖。
         @Bean
-        @ConditionalOnMissingBean(fun.commons.framework4j.signature.service.SecretProvider.class)
         public fun.commons.notification4j.kms.NfyTenantSecretProvider nfyTenantSecretProvider(
                 fun.commons.notification4j.mapper.NfyaTenantMapper mapper) {
             return new fun.commons.notification4j.kms.NfyTenantSecretProvider(mapper);
