@@ -1,4 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
+import fs from 'node:fs'
+import path from 'node:path'
 import {
   BASE, platformToken, createTenant, nfy, expectCode0, evidence, get, post, put, patch, uniq, until,
   type NfyResp, type Tenant,
@@ -20,6 +22,11 @@ import { SmtpSink } from './helpers/smtp-sink'
  * ③ 投递成功回写 last_verify_at（投递成功即渠道可用性证据）。IM（DINGTALK/WECOM/FEISHU）口径不变：
  * 仍须真实 verify 且熔断后须先重新验证（10610）。本线全链（注册→直启→计划→引擎→SMTP→重试→DEAD→重投→
  * 熔断→重启用→免打扰）均为真实 API 端到端，零绕行。
+ *
+ * 【第 2 轮证据改版】投递页是引擎线的天然 UI 证据面：外发成功链→投递页 SUCCESS 行、失败退避→FAILED 行
+ * （退避窗内截图）、DEAD→DEAD 行、DLV-002 重投→UI「重投」按钮动作+行转 SUCCESS（前后图）、quiet_hours→
+ * PENDING 推迟行、熔断→渠道页 DISABLED 徽标+消息页属主站内信。均为宿主握手页驱动真实 SPA 截图
+ * （NFY_EVIDENCE_DIR 参数化）；next_retry_at 等 UI 暂无列的字段以 API 面证据补位（P3 改进注记）。
  */
 
 const SINK_PORT = 3925
@@ -41,6 +48,21 @@ interface DeliveryListResp { list: DeliveryVO[]; total: number }
 
 const sigOf = (t: Tenant) => ({ key: t.open_id, secret: t.tenant_secret })
 const opt = (t: Tenant, userid?: string) => ({ token: t.token, userId: userid, sig: sigOf(t) })
+
+// ---------- 第 2 轮证据规约：UI 面用例以真实 SPA 界面截图为关键证据（投递页=引擎线天然 UI 面） ----------
+const SHOTS = process.env.NFY_EVIDENCE_DIR
+  ? path.resolve(process.env.NFY_EVIDENCE_DIR)
+  : path.resolve(process.cwd(), '../docs/test/report/local-run/screenshots')
+const HOST = 'http://localhost:3000/nfy-host.html'
+const fl = (p: Page) => p.frameLocator('#nfy')
+
+/** 真实界面截图（fullPage） */
+async function shot(p: Page, name: string): Promise<string> {
+  fs.mkdirSync(SHOTS, { recursive: true })
+  const file = path.join(SHOTS, `${name}.png`)
+  await p.screenshot({ path: file, fullPage: true })
+  return file
+}
 
 test.describe('L5 外发引擎线', () => {
   let page: Page
@@ -91,6 +113,22 @@ test.describe('L5 外发引擎线', () => {
     const list = expectCode0(await nfy<{ list: Array<Record<string, unknown>> }>(
       await get(`${BASE}/nfy/api/v1/runtime/channels`, opt(t, userid))))
     return list.data.list.find((c) => c.channel_id === chId)!
+  }
+
+  /** 打开宿主握手页驱动真实 SPA（iframe#nfy + NFY_TOKEN 握手） */
+  const openUI = async (pageName: string, userid: string) => {
+    await page.goto(`${HOST}?page=${pageName}&token=${t.token}&user_id=${userid}`)
+    return fl(page)
+  }
+  /** 打开投递页并按 biz_no 过滤查询（管理面 SPA；成功后表格恰 1 行） */
+  const openDeliveries = async (userid: string, bizNo: string) => {
+    const f = await openUI('deliveries', userid)
+    await expect(f.getByRole('heading', { name: '投递记录' })).toBeVisible()
+    await f.getByPlaceholder('biz_no').fill(bizNo)
+    await f.getByRole('button', { name: '查询' }).click()
+    const row = f.locator('.el-table__body-wrapper .el-table__row')
+    await expect(row, 'biz_no 过滤后恰 1 行').toHaveCount(1)
+    return { f, row }
   }
 
   // 跨用例接力状态（workers=1 串行，声明序执行）
@@ -147,11 +185,18 @@ test.describe('L5 外发引擎线', () => {
     expect(recs[0]!.data, 'Subject 头含标题').toContain(`Subject: ${title}`)
     expect(recs[0]!.to, '收件人=渠道 target').toContain(target)
     expect(recs[0]!.from, '发件人=实例 mail-from').toContain('nfy-e2e@test.local')
+    // 第 2 轮证据规约（UI 面关键图）：投递页真实 SPA 出现 SUCCESS 行（biz_no 过滤恰 1 行）
+    const { row } = await openDeliveries('u1', bizNo)
+    await expect(row.locator('.fc-tag', { hasText: 'SUCCESS' })).toBeVisible()
+    await expect(row).toContainText('EMAIL')
+    await expect(row).toContainText('u1')
+    await shot(page, 'L5-01-投递页UI-SUCCESS行')
     await evidence(page, 'L5-01-外发成功链', {
       链路: '类型 default_channels=[EMAIL] → send 计划 PENDING → 引擎领取(500ms 扫描) → SMTP → SUCCESS',
       投递记录: { delivery_id: d!.delivery_id, status: d!.status, retry_count: d!.retry_count, target: d!.target, sent_at: d!.sent_at },
       SMTP收包: { from: recs[0]!.from, to: recs[0]!.to, subject: `Subject: ${title}` },
       信道: `localhost:${SINK_PORT}（helpers/smtp-sink）`,
+      UI复核: '投递页（biz_no 过滤）出现 1 行 SUCCESS 徽标（EMAIL/u1/重试次数 0/发送时间回显，错误信息列空）',
     })
   })
 
@@ -165,14 +210,24 @@ test.describe('L5 外发引擎线', () => {
     const bizNo = 'l5-rt-' + uniq('')
     expectCode0(await sendMsg('u2', code, bizNo, title))
     const seen: Array<{ status: string; retry_count: string; next_retry_at: number; created_at: number }> = []
-    const d = await until(async () => {
+    const observe = async () => {
       const r = await firstDelivery(bizNo)
       if (r) {
         seen.push({ status: r.status, retry_count: String(r.retry_count), next_retry_at: Number(r.next_retry_at), created_at: Number(r.created_at) })
       }
       return r
-    }, (r) => r !== null && r.status === 'SUCCESS', 35000, 400)
+    }
+    // API 面观测 FAILED(1) → FAILED(2) 递进（仍处 5s 退避窗内，引擎尚未第 3 次领取）
+    const f2row = await until(observe, (r) => r !== null && r.status === 'FAILED' && String(r.retry_count) === '2', 25000, 300)
+    // 第 2 轮证据规约（UI 面关键图）：FAILED 退避窗内投递页真实 SPA 行 —— FAILED 徽标 + 重试次数 + 454 错误留痕
+    const { row } = await openDeliveries('u2', bizNo)
+    await expect(row.locator('.fc-tag', { hasText: 'FAILED' })).toBeVisible()
+    await expect(row).toContainText('SMTP')
+    await shot(page, 'L5-02-投递页UI-FAILED行退避中')
+    // 继续 API 面等到终态 SUCCESS（第 3 次尝试，sink 恢复）
+    const d = await until(observe, (r) => r !== null && r.status === 'SUCCESS', 35000, 400)
     expect(Number(d!.retry_count), '第 3 次尝试成功，重试计数=2').toBe(2)
+    expect(Number(f2row!.next_retry_at) - Number(f2row!.created_at) > 0, 'FAILED(2) 携带 next_retry_at（退避窗，UI 暂无该列）').toBe(true)
     const f1 = [...seen].reverse().find((x) => x.status === 'FAILED' && x.retry_count === '1')
     const f2 = [...seen].reverse().find((x) => x.status === 'FAILED' && x.retry_count === '2')
     expect(f1, '观测到 FAILED(1)').toBeTruthy()
@@ -190,6 +245,9 @@ test.describe('L5 外发引擎线', () => {
       退避配置: '测试实例 backoff=2,5,10s（契约生产 1/5/15min，实例提速）',
       观测: `FAILED(1) 退避 ${gap1}ms；FAILED(2) 退避 ${gap2}ms；第 3 次尝试 → SUCCESS`,
       投递终态: { delivery_id: d!.delivery_id, status: d!.status, retry_count: d!.retry_count },
+      FAILED窗: { status: f2row!.status, retry_count: f2row!.retry_count, next_retry_at: f2row!.next_retry_at },
+      UI复核: 'FAILED 退避窗内投递页出现 FAILED 徽标行（重试次数 2 + SMTP 454 错误留痕）',
+      改进注记: 'P3：投递页 UI 未展示 next_retry_at 列（下次重试时间用户不可见），本用例以 API 面证据补位',
     })
   })
 
@@ -207,17 +265,29 @@ test.describe('L5 外发引擎线', () => {
     // 非 DEAD 不可重投 → 10402（用 L5-02 的 SUCCESS 行）
     expect((await retryApi(l502DeliveryId)).code, 'SUCCESS 行重投 10402').toBe(10402)
     expect((await retryApi('999999999')).code, '不存在投递 10400').toBe(10400)
-    // sink 恢复 → DLV-002 重投 → SUCCESS
+    // 第 2 轮证据规约（UI 前后图①）：投递页真实 SPA 出现 DEAD 行（红色徽标 + 重投按钮仅 DEAD 行有）
+    const { f, row } = await openDeliveries('u3', bizNo)
+    await expect(row.locator('.fc-tag', { hasText: 'DEAD' })).toBeVisible()
+    await expect(row).toContainText('4')
+    const retryBtn = row.getByRole('button', { name: '重投' })
+    await expect(retryBtn).toBeVisible()
+    await shot(page, 'L5-03-投递页UI-DEAD行重投前')
+    // sink 恢复 → UI 操作 DLV-002 重投（POST /admin/deliveries/{id}/retry → PENDING 立即可扫）
     sink.failFirst = 0
-    const r = expectCode0(await retryApi(dead!.delivery_id))
-    expect(r.data.status, '重投即置 PENDING 立即可扫').toBe('PENDING')
+    await retryBtn.click()
+    await expect(f.getByText('已重新入队'), '重投成功 toast').toBeVisible()
     const done = await until(() => firstDelivery(bizNo), (x) => x !== null && x.status === 'SUCCESS', 25000, 400)
     expect(sink.records().length, '恢复后重投 sink 收包').toBeGreaterThanOrEqual(1)
+    // UI 前后图②：同一 biz_no 行转 SUCCESS
+    await f.getByRole('button', { name: '查询' }).click()
+    await expect(row.locator('.fc-tag', { hasText: 'SUCCESS' })).toBeVisible()
+    await shot(page, 'L5-03-投递页UI-重投后转SUCCESS')
     await evidence(page, 'L5-03-DEAD与人工重投', {
       死信: { status: dead!.status, retry_count: dead!.retry_count, error: dead!.error_message },
       DLV002校验: { '非 DEAD 重投': 10402, '不存在 id': 10400 },
-      重投: { 响应: r.data, 恢复后终态: done!.status },
+      重投: { 入口: '投递页 DEAD 行「重投」按钮（真实 UI 动作）', 契约: 'POST /admin/deliveries/{id}/retry → {status:"PENDING"} 立即可扫', 恢复后终态: done!.status },
       时序: '失败退避 2/5/10s 三次 → DEAD；重投 next_retry_at=now',
+      UI复核: '重投前 DEAD 徽标+重投按钮 → 点击重投 toast「已重新入队」→ 重查后同行转 SUCCESS 徽标（前后图）',
     })
   })
 
@@ -239,10 +309,16 @@ test.describe('L5 外发引擎线', () => {
     expect(deferMs, `next_retry_at 推迟到窗结束（≈1h，实测 ${Math.round(deferMs / 1000)}s）`).toBeGreaterThan(25 * 60_000)
     expect(deferMs).toBeLessThan(130 * 60_000)
     expect(sink.records().length, '静默窗内不真发（不真等窗结束）').toBe(sinkBefore)
+    // 第 2 轮证据规约（UI 关键图）：投递页真实 SPA 呈现被推迟的 PENDING 行（quiet_hours 计划期推迟）
+    const { row } = await openDeliveries('u4', bizNo)
+    await expect(row.locator('.fc-tag', { hasText: 'PENDING' })).toBeVisible()
+    await expect(row).toContainText('0')
+    await shot(page, 'L5-04-投递页UI-PENDING推迟行')
     await evidence(page, 'L5-04-quiet_hours推迟', {
       静默窗: window,
       投递: { status: d!.status, next_retry_at: d!.next_retry_at, 推迟: `${Math.round(deferMs / 1000)}s` },
       语义: '推迟发送非丢弃（Courier 口径）：next_retry_at=窗结束，引擎按 next_retry_at<=now 自然发出',
+      UI复核: '投递页出现 PENDING 徽标行（重试次数 0，静默窗内不发送）；next_retry_at 由 API 面断言（UI 暂无该列）',
       豁免注记: 'URGENT 全量渠道路径不经订阅矩阵、INAPP 落库即达——均不受免打扰影响（NfyQuietHoursTest 深覆盖）',
     })
   })
@@ -275,6 +351,11 @@ test.describe('L5 外发引擎线', () => {
     const broken = await until(() => channelRow('u5', l505ChannelId), (c) => c.status === 'DISABLED', 45000, 500)
     expect(String(broken.fail_count), '第 5 次失败达到阈值').toBe('5')
     expect(broken.status, '熔断 DISABLED').toBe('DISABLED')
+    // 第 2 轮证据规约（UI 关键图①）：渠道页真实 SPA 出现熔断渠道 DISABLED 徽标（红色）
+    const fch = await openUI('channels', 'u5')
+    const card = fch.locator('.card', { hasText: '邮箱渠道-u5' })
+    await expect(card.locator('.fc-tag', { hasText: 'DISABLED' })).toBeVisible()
+    await shot(page, 'L5-06-渠道页UI-熔断DISABLED徽标')
     // ND-L5-01 修复：EMAIL 熔断态显式重新启用即视为重新验证 → code 0 且 fail_count 归 0（原 10610 死锁不可恢复）
     const p = expectCode0(await nfy<{ status: string }>(await patch(
       `${BASE}/nfy/api/v1/runtime/channels/${l505ChannelId}`, { status: 'ENABLED' }, opt(t, 'u5'))))
@@ -287,6 +368,10 @@ test.describe('L5 外发引擎线', () => {
       await get(`${BASE}/nfy/api/v1/runtime/messages?type_code=CHANNEL_ALERT`, opt(t, 'u5'))))
     expect(inbox.data.list.length, '属主收到熔断站内信').toBeGreaterThanOrEqual(1)
     expect(inbox.data.list[0]!.title).toContain('渠道连续失败已自动停用')
+    // 第 2 轮证据规约（UI 关键图②）：消息页真实 SPA 呈现属主熔断站内信（引擎兜底直达 INAPP）
+    const fmsg = await openUI('messages', 'u5')
+    await expect(fmsg.getByText('渠道连续失败已自动停用').first()).toBeVisible()
+    await shot(page, 'L5-06-消息页UI-属主熔断站内信')
     sink.failFirst = 0
     await evidence(page, 'L5-06-熔断与属主站内信', {
       流转: 'DLV-002 重投 DEAD 行 → 第 5 次失败 → fail_count=5 → CAS 熔断 DISABLED',
@@ -296,6 +381,7 @@ test.describe('L5 外发引擎线', () => {
         语义: 'EMAIL 显式重启用=重新验证（ND-L5-01 修复）；IM 熔断仍须真实 verify（10610，IT 钉死）',
       },
       属主站内信: { type_code: 'CHANNEL_ALERT', title: inbox.data.list[0]!.title },
+      UI复核: '渠道页「邮箱渠道-u5」卡片 DISABLED 红色徽标（熔断态 UI 可见）；消息页出现「渠道连续失败已自动停用」站内信',
       限速注记: '每渠道限速（实例放宽 600/min）由引擎内存窗实现，API 面不可直接观测（NfyDeliveryEngineTest 深覆盖）',
     })
   })

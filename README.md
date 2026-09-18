@@ -1,73 +1,118 @@
-# notification4j —— 通用应用系统站内消息/公告/站外通知微中台
+# notification4j
 
-多租户模式提供「站内消息 + 公告 + 站外渠道（钉钉/企微/飞书/邮件）通知」统一能力：
-应用系统（租户）通过 **OpenAPI / Java Starter（NotifyClient）** 发消息，终端用户通过
-**嵌入式微前端消息中心** 查看通知、自注册 IM 群 webhook 渠道、配置类型×渠道订阅矩阵。
+通用应用系统的站内消息 / 公告 / 站外通知多租户微中台：应用系统（租户）通过
+**OpenAPI / Java Starter（NotifyClient）** 发消息，终端用户在**嵌入式消息中心**
+查看通知、自注册 IM 群 webhook 渠道、配置「消息类型 × 渠道」订阅矩阵；独立部署形态
+内置外发引擎，将站内消息投递到钉钉 / 企微 / 飞书 / 邮件。
 
-## 目录结构
+> 基于 framework4j v1.5.1 构建 · JDK 17 · Spring Boot 3.2.7 · PostgreSQL 16 · Redis 7 · License: MIT
 
-```
-notification4j/
-├── documents/          # 产品/数据库/接口/技术方案文档 + adr/
-├── backend/            # Maven 多模块（parent: notification4j-parent）
-│   ├── notification-spring-boot-starter/   # 业务方唯一依赖（API/服务/引擎/client 门面）
-│   ├── notification4j-app/                 # 独立部署形态（flyway+密钥+三域 API+引擎）
-│   └── notification4j-it/                  # 集成测试（Testcontainers PG16+Redis7，109 用例）
-└── frontend/           # Vue3 消息中心（消息/公告/渠道/订阅/投递五页 + 铃铛，358 vitest）
-```
+## 特性
 
-## 后端快速开始
+- **站内信**：定向 fanout-on-write，批量异步 Job，撤回（竞态安全语义，不追回已投递）
+- **公告**：fanout-on-read 免落库展开，租户公告与平台公共公告合并生效列表，已读 / 已确认
+- **渠道与订阅**：渠道 SPI 适配器（钉钉 / 企微 / 飞书 / 邮件），租户自注册 IM 群 webhook，「消息类型 × 渠道」订阅矩阵（站内信恒选）
+- **外发引擎**：DB 队列 + SKIP LOCKED，指数退避重试 + 失败熔断 + 免打扰时段（quiet_hours），按渠道集中出站限速
+- **多租户**：租户 OpenID 隔离，token 双型别（PLATFORM / TENANT），租户级 HMAC 签名开关，租户生命周期（SUSPEND 即时阻断）
+- **三种部署形态**：独立部署 fat jar / 嵌入 starter（进程内）/ client-starter（跨进程）——业务代码零改动切换
+- **嵌入消息中心**：iframe 多入口 + postMessage 握手，消息 / 公告 / 渠道 / 订阅 / 投递五页 + 铃铛，SPA 托管进 jar 免双部署
+
+## 快速开始
+
+### 1. 后端构建与测试
+
+前置：JDK 17、本机 Docker（集成测试用 Testcontainers 拉起 PG16 + Redis7）；framework4j v1.5.1 已在本机 m2。
 
 ```bash
 cd backend
-# 依赖：JDK17、本地 Docker（Testcontainers）、本地 m2 离线构建
-mvn -o install -DskipTests     # 构建并安装 starter 到本地仓库
-mvn -o test -pl notification4j-it   # 109 项集成测试
+mvn -o install -DskipTests            # 构建四模块并安装 starter 到本地仓库
+mvn -o test -pl notification4j-it     # 集成测试 129 用例（28 套件）
 ```
 
-独立部署（app）需要环境变量：`PLATFORM_CLIENT_SECRET`、`JWT_SECRET`、`AES_KEY`（fail-fast 无默认值），
-以及 PostgreSQL + Redis；`application.yml` 已含出厂段（三域 API + 外发引擎双开）。
+只跑冒烟层（一条顺序链跑通核心业务闭环）：`mvn -o test -pl notification4j-it -Dgroups=smoke`。
 
-### 业务方嵌入（starter）
-
-```java
-// application.yml: nfy.runtime.client-enabled=true（local 默认；remote 需 remote-url）
-@Autowired NotifyClient notifyClient;
-
-notifyClient.send(tenantId, SendMessageRequest.of(
-    "ORDER", List.of("u_1"), "订单已支付", "**OD1** 已支付", "NORMAL", null, "biz-1"));
-notifyClient.announce(tenantId, AnnounceRequest.of("停机公告", "内容", "IMPORTANT", 1, null, null));
-```
-
-### 业务方前端嵌入
-
-```html
-<iframe src="{nfy-host}/nfy/tenant/page/bell" style="width:48px;height:48px"></iframe>
-<script>
-  window.addEventListener('message', (e) => {
-    if (e.data?.type === 'NFY_READY') {
-      iframe.contentWindow.postMessage(
-        { type: 'NFY_TOKEN', token: '<租户后端代换的短期 token>', user_id: 'u_1' }, '*');
-    }
-  });
-</script>
-```
-
-## 前端快速开始
+### 2. 独立部署运行
 
 ```bash
-cd frontend
-pnpm install --prefer-offline
-pnpm verify        # vue-tsc + eslint + vitest（358 用例）
-pnpm dev           # http://localhost:5173
+cd backend
+mvn -o package -pl notification4j-app -DskipTests   # 产物 notification4j-app-1.0.0.jar（fat jar）
 ```
 
-## 测试与验证门
+前置：PostgreSQL 16 + Redis 7（出厂配置指向 `localhost:5432` / `6379`）；三个机密环境变量 fail-fast、无默认值。
 
-| 门 | 命令 | 状态 |
+```bash
+JWT_SECRET=<32B+ 随机串> \
+AES_KEY=<32B 随机串> \
+PLATFORM_CLIENT_SECRET=<平台域密钥> \
+java -jar notification4j-app/target/notification4j-app-1.0.0.jar
+```
+
+启动后：消息中心控制台 `http://localhost:9200/`（SPA 由 jar 直接托管），OpenAPI
+`http://localhost:9200/swagger-ui/index.html`，tracelog 控制台 `/tracelog/index.html`。
+
+### 3. E2E 回归
+
+前置：本机已创建容器 `nfy4j-e2e-pg`（PG16 → 25432）与 `nfy4j-e2e-redis`（→ 26379）。
+
+```bash
+docker start nfy4j-e2e-pg nfy4j-e2e-redis
+bash frontend/e2e-regression/bin/start-app.sh        # 启动出厂等价测试实例 :9200（引擎提速旋钮）
+cd frontend
+NFY_EVIDENCE_DIR=../docs/test/report/local-run/screenshots \
+  npx playwright test -c e2e-regression/playwright.config.ts   # 70 用例 · L1~L8 八条业务线
+```
+
+## 架构一分钟
+
+同一套业务实现，三种接入形态按依赖坐标切换：
+
+| 形态 | 引入 | 适用 | 数据面 |
+|---|---|---|---|
+| 独立部署 | `notification4j-app` fat jar | 作为微中台独立运行，多业务方共享 | 自带（PG + Redis + 引擎 + SPA 托管） |
+| 嵌入接入 | `notification4j-starter` | 通知能力嵌进宿主应用进程（mode=local） | 共享宿主（MyBatis + PG + Redis） |
+| 跨进程接入 | `notification4j-client-starter` | 只发消息 / 公告，调独立部署实例（mode=remote） | **零**（HTTP + S2S JWT + HMAC 签名） |
+
+后端 Maven 多模块（parent: `notification4j-parent`）：
+
+| 模块目录 | artifactId | 职责 |
 |---|---|---|
-| 后端 IT | `mvn -o test -pl notification4j-it` | 109/109 |
-| 前端单测 | `pnpm vitest run` | 358/358 |
-| 前端类型/lint | `pnpm vue-tsc -b --noEmit && pnpm eslint "src/**/*.vue"` | 0 错误 |
+| `notification-spring-boot-starter` | `notification4j-starter` | 全量业务实现：三域 API / 服务 / 外发引擎 / NotifyClient 门面 / SPA 托管 |
+| `notification4j-client-starter` | `notification4j-client-starter` | 跨进程轻量接入（零数据面，与全量 starter 同 API 门面） |
+| `notification4j-it` | `notification4j-it` | 集成测试层（Testcontainers PG16 + Redis7，Flyway 真实迁移） |
+| `notification4j-app` | `notification4j-app` | 独立部署壳（出厂配置 / Flyway baseline / OpenAPI） |
 
-详见 `documents/接口设计文档.md`（V1.2.1 实现状态矩阵）与 `documents/adr/`。
+业务方发消息（嵌入与跨进程同一接口，切换形态只换依赖坐标）：
+
+```java
+@Autowired NotifyClient notifyClient;
+notifyClient.send(tenantId, SendMessageRequest.of(
+    "ORDER", List.of("u_1"), "订单已支付", "内容", "NORMAL", null, "biz-1"));   // biz-1 幂等
+```
+
+前端消息中心为 Vue 3 微前端（五页 + 铃铛），iframe 嵌入 + postMessage 握手，
+接入细节见 [docs/operations/integration-guide.md](docs/operations/integration-guide.md)。
+
+## 测试与质量
+
+四层测试体系（单元 / 冒烟 / 集成回归 / E2E）定义见 `docs/test/test-plan.md`：
+
+| 层 | 命令 | 规模 |
+|---|---|---|
+| 后端单元（starter 纯单测） | `mvn -o test -pl notification-spring-boot-starter` | 411 用例 |
+| 后端集成（Testcontainers） | `mvn -o test -pl notification4j-it` | 129 用例 / 28 套件 |
+| 冒烟（集成层子集） | `mvn -o test -pl notification4j-it -Dgroups=smoke` | 8 用例顺序链 |
+| 前端组件单测 | `cd frontend && pnpm vitest run` | 382 用例 |
+| E2E 回归（Playwright） | `npx playwright test -c e2e-regression/playwright.config.ts` | 70 用例 / 8 业务线 |
+
+覆盖率双门槛（合并口径 = starter 单测 exec + IT exec）：`dto / entity / kms / tracelog / client /
+util / controller` 七包行覆盖 100%；整体 BUNDLE 行覆盖 ≥ 96%。明细见
+[backend/README.md](backend/README.md)，历轮全量回归证据见 [docs/test/report/](docs/test/report/)。
+
+## 文档导航
+
+全部文档入口与「按角色找文档」索引见 **[docs/README.md](docs/README.md)**（PRD / 系统设计 /
+数据库设计 / API 契约 / 11 篇 ADR / 集成指南 / 部署 / 测试报告 / 发布物）。
+
+## License
+
+[MIT](LICENSE)

@@ -16,13 +16,15 @@ import {
  *       变体宿主页用 page.route + fulfill（origin 保持白名单 3000）或 page.setContent（非法 origin 场景）。
  */
 
-const SHOTS = path.resolve(process.cwd(), '../documents/test-report/screenshots')
+const SHOTS = process.env.NFY_EVIDENCE_DIR
+  ? path.resolve(process.env.NFY_EVIDENCE_DIR)
+  : path.resolve(process.cwd(), '../docs/test/report/local-run/screenshots')
 const HOST = 'http://localhost:3000/nfy-host.html'
 const APP = (p: string) => `http://localhost:9200/nfy/tenant/app/${p}`
 const BELL = 'http://localhost:9200/nfy/tenant/page/bell'
 const num = (v: unknown) => Number(v)
 
-/** 真实页面截图（相对 cwd=frontend 解析到 documents/test-report/screenshots） */
+/** 真实页面截图（相对 cwd=frontend 解析到 docs/test/report/local-run/screenshots） */
 async function shot(page: Page, name: string): Promise<string> {
   fs.mkdirSync(SHOTS, { recursive: true })
   const file = path.join(SHOTS, `${name}.png`)

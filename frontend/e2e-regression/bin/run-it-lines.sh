@@ -1,8 +1,8 @@
 #!/bin/bash
-# 逐业务线既有 IT 深回归（串行，防 m2 竞态）。日志: documents/test-report/it-logs/Lx.log
+# 逐业务线既有 IT 深回归（串行，防 m2 竞态）。日志: frontend/e2e-regression/.runs/it-logs/Lx.log（gitignored）
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-LOGDIR="$ROOT/documents/test-report/it-logs"
-SUM="$ROOT/documents/test-report/it-summary.txt"
+LOGDIR="$ROOT/frontend/e2e-regression/.runs/it-logs"
+SUM="$ROOT/frontend/e2e-regression/.runs/it-summary.txt"
 mkdir -p "$LOGDIR"
 : > "$SUM"
 

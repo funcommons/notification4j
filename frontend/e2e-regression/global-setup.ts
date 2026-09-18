@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
  */
 const here = dirname(fileURLToPath(import.meta.url))
 const hostDir = resolve(here, 'hosts')
-const appLog = resolve(here, '../../documents/test-report/e2e-app.log')
+const appLog = resolve(here, '.runs/e2e-app.log')
 
 async function up(url: string, timeoutMs = 5000): Promise<boolean> {
   const ctrl = new AbortController()

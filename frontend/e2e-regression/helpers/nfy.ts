@@ -9,13 +9,16 @@ import { expect } from '@playwright/test'
  * - HTTP 全部走 node 原生 fetch（Node26 下 Playwright APIRequestContext 存在 context 过早 dispose 问题）；
  * - HMAC 签名复刻 AuthenticatedHttpTransport/NfyHmacSigner 口径：STS=METHOD\nPATH(去query)\nTS\nNONCE\nBODY_MD5；
  * - 平台/租户引导（建租户、建类型等）；
- * - 证据：响应渲染成 HTML 页并截图到 documents/test-report/screenshots/。
+ * - 证据：响应渲染成 HTML 页并截图（NFY_EVIDENCE_DIR，默认 docs/test/report/local-run/screenshots）。
  */
 
 export const BASE = process.env.NFY_BASE ?? 'http://localhost:9200'
 export const PLATFORM_SECRET = 'platform-secret-e2e'
 // 约定：playwright 始终从 frontend/ 目录以 `npx playwright test -c e2e-regression/...` 启动（cwd=frontend）
-const SHOTS = path.resolve(process.cwd(), '../documents/test-report/screenshots')
+// 证据目录：NFY_EVIDENCE_DIR 优先（每轮回归独立目录，如 docs/test/report/2026-09-18-01/screenshots）
+const SHOTS = process.env.NFY_EVIDENCE_DIR
+  ? path.resolve(process.env.NFY_EVIDENCE_DIR)
+  : path.resolve(process.cwd(), '../docs/test/report/local-run/screenshots')
 
 // ---------- 签名 ----------
 

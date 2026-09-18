@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
 import {
   BASE, platformToken, createTenant, nfy, expectCode0,
@@ -5,13 +7,39 @@ import {
 } from './helpers/nfy'
 
 /**
- * L3 公告线 · Playwright 端到端回归
+ * L3 公告线 · Playwright 端到端回归（第 2 轮：前端界面截图为证据主体）
  * 契约：ANN-001（平台+租户合并生效列表，published_at 倒序）、ANN-002（标记阅读幂等）、
  *       ANN-003（确认幂等 + unconfirmed_count 联动）、AAN-001~005（租户公告管理）、
  *       PAN-001~004（平台公告；第 28 步修复回归：confirm 回执落公告归属域 → 平台侧 confirm_count 可见）、
  *       PTE-005（mandatory 唯一入口=平台域）
  * 对应 IT 深回归：NfyAnnouncementFlowTest / NfyAnnouncementAdminTest / NfyPlatformDomainTest
+ * 证据新规：可 UI 化用例（L3-01 合并列表 / L3-02 标为已读 / L3-03 我知道了确认）经宿主握手页驱动
+ *          真实 SPA（NFY_READY/NFY_TOKEN 握手 + frameLocator('#nfy') 断言）截图为关键证据；
+ *          纯 API 面（L3-04 管理生命周期 / L3-05 PAN 跨域 confirm_count / L3-06 mandatory）保留
+ *          evidence() 渲染页作关键图（API 面）。
  */
+
+const SHOTS = process.env.NFY_EVIDENCE_DIR
+  ? path.resolve(process.env.NFY_EVIDENCE_DIR)
+  : path.resolve(process.cwd(), '../docs/test/report/local-run/screenshots')
+const HOST = 'http://localhost:3000/nfy-host.html'
+const fl = (page: Page) => page.frameLocator('#nfy')
+
+/** 真实界面截图（关键证据主体）；先等 400ms 微过渡（如 el-zoom-in-center）落定再截 */
+async function shot(page: Page, name: string): Promise<string> {
+  fs.mkdirSync(SHOTS, { recursive: true })
+  const file = path.join(SHOTS, `${name}.png`)
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: file, fullPage: true })
+  return file
+}
+
+/** 打开宿主握手页：NFY_READY/NFY_TOKEN 握手完成 → 壳 connected（.nfy-brand 渲染） */
+async function openUi(page: Page, pageName: string, token: string, userId: string): Promise<void> {
+  await page.goto(`${HOST}?page=${pageName}&token=${encodeURIComponent(token)}&user_id=${encodeURIComponent(userId)}`)
+  await expect(fl(page).locator('.nfy-brand')).toHaveText('消息中心', { timeout: 20000 })
+}
+
 test.describe('L3 公告线', () => {
   let page: Page
   let plat: string
@@ -102,7 +130,8 @@ test.describe('L3 公告线', () => {
     // 租户公告后发布（published_at 更晚 → 倒序在前）
     await createAnnouncement(tA.token, tenBase, { title: tenTitle, publish: true })
     await createAnnouncement(tA.token, tenBase, { title: draftTitle, publish: false })
-    const r = await runtimeList(tA, uniq('l3u'))
+    const uidA = uniq('l3u')
+    const r = await runtimeList(tA, uidA)
     const titles = r.data.list.map((i) => String(i.title))
     expect(titles.some((x) => x === platTitle), '平台公告(tenant 0)同页可见').toBe(true)
     expect(titles.some((x) => x === tenTitle), '本租户生效公告可见').toBe(true)
@@ -115,10 +144,28 @@ test.describe('L3 公告线', () => {
     const rb = await runtimeList(tB, uniq('l3u'))
     expect(rb.data.list.some((i) => i.title === platTitle), 'B 可见平台公告').toBe(true)
     expect(rb.data.list.some((i) => i.title === tenTitle), 'B 不可见 A 租户公告').toBe(false)
+
+    // UI 面（第 2 轮新规·关键证据）：公告页真实 SPA 呈现合并列表（平台/需确认标签 + 倒序 + 草稿不可见）
+    await openUi(page, 'announcements', tA.token, uidA)
+    const f = fl(page)
+    await expect(f.getByRole('heading', { name: '公告' })).toBeVisible()
+    await expect(f.getByText(platTitle, { exact: true })).toBeVisible()
+    await expect(f.getByText(tenTitle, { exact: true })).toBeVisible()
+    await expect(f.locator('li', { hasText: platTitle }).getByText('平台', { exact: true }),
+      '平台公告带「平台」标签').toBeVisible()
+    await expect(f.locator('li', { hasText: platTitle }).getByText('需确认', { exact: true }),
+      'need_confirm=1 带「需确认」标签').toBeVisible()
+    await expect(f.getByText(draftTitle), 'DRAFT 草稿 UI 不可见').toHaveCount(0)
+    const tenY = (await f.locator('li', { hasText: tenTitle }).boundingBox())!.y
+    const platY = (await f.locator('li', { hasText: platTitle }).boundingBox())!.y
+    expect(tenY, 'UI 列表 published_at 倒序：租户公告(后发布)在平台公告上方').toBeLessThan(platY)
+    await shot(page, 'L3-01-公告页UI合并列表')
+
     await evidence(page, 'L3-01-合并生效列表', {
       断言: { 平台公告: platTitle, 租户公告: tenTitle, 草稿: draftTitle + '(不可见)' },
       排序: 'published_at 倒序 → 租户公告(后发布)在前',
       A列表条数: r.data.list.length, B可见平台公告: true, B不可见A租户公告: true,
+      UI复核: '公告页 SPA 同屏呈现平台+租户公告、平台/需确认标签、倒序（见 L3-01-公告页UI合并列表.png）',
     })
   })
 
@@ -127,18 +174,28 @@ test.describe('L3 公告线', () => {
     const id = await createAnnouncement(plat, platBase, { title, needConfirm: 1, publish: true })
     const u = uniq('l3ru')
     const before = await unconfirmed(tA, u)
-    for (let i = 1; i <= 2; i++) {
-      const r = expectCode0(await rl(async () => nfy<{ read: boolean }>(
-        await post(`${BASE}/nfy/api/v1/runtime/announcements/${id}/read`, undefined, RT(tA, u)))))
-      expect(r.data.read, `第 ${i} 次 markRead 均成功（幂等）`).toBe(true)
-    }
+
+    // 第 1 次 markRead 经真实 SPA 控件「标为已读」（UI 面·关键证据）
+    await openUi(page, 'announcements', tA.token, u)
+    const f = fl(page)
+    const row = f.locator('li', { hasText: title })
+    await expect(row.getByText('标为已读')).toBeVisible()
+    await row.getByText('标为已读').click()
+    await expect(row.getByText('标为已读'), '已读后「标为已读」控件消失').toBeHidden()
+    await shot(page, 'L3-02-UI标为已读操作后')
+
+    // 第 2 次 markRead 走 API → 两次调用均成功（幂等）
+    const r = expectCode0(await rl(async () => nfy<{ read: boolean }>(
+      await post(`${BASE}/nfy/api/v1/runtime/announcements/${id}/read`, undefined, RT(tA, u)))))
+    expect(r.data.read, '第 2 次 markRead 仍成功（幂等）').toBe(true)
     const list = await runtimeList(tA, u)
     expect(list.data.list.find((i) => i.title === title)?.my_status, 'my_status→READ').toBe('READ')
     expect(await unconfirmed(tA, u), '阅读不动未确认数（确认才联动）').toBe(before)
     await evidence(page, 'L3-02-标记阅读幂等', {
-      步骤: '两次 POST /runtime/announcements/{id}/read',
-      两次响应: '均 code=0 data.read=true',
+      步骤: '第 1 次 POST /runtime/announcements/{id}/read 经 UI「标为已读」控件；第 2 次直调 API',
+      两次响应: '均成功（UI 后 my_status=READ；API 再读 data.read=true）',
       my_status: 'READ', unconfirmed_count: `${before} → ${await unconfirmed(tA, u)}（不变）`,
+      UI复核: '「标为已读」点击后控件消失（见 L3-02-UI标为已读操作后.png）',
     })
   })
 
@@ -148,18 +205,28 @@ test.describe('L3 公告线', () => {
     const u = uniq('l3cu')
     const before = await unconfirmed(tA, u)
     expect(before, '确认前在本公告未确认集').toBeGreaterThanOrEqual(1)
-    for (let i = 1; i <= 2; i++) {
-      const r = expectCode0(await rl(async () => nfy<{ confirmed: boolean }>(
-        await post(`${BASE}/nfy/api/v1/runtime/announcements/${id}/confirm`, undefined, RT(tA, u)))))
-      expect(r.data.confirmed, `第 ${i} 次 confirm 均 confirmed=true（幂等，uk 兜底）`).toBe(true)
-    }
+
+    // 第 1 次 confirm 经真实 SPA 控件「我知道了」（UI 面·关键证据）
+    await openUi(page, 'announcements', tA.token, u)
+    const f = fl(page)
+    const row = f.locator('li', { hasText: title })
+    await expect(row.getByText('我知道了')).toBeVisible()
+    await row.getByText('我知道了').click()
+    await expect(row.getByText('已确认'), '确认后呈现「已确认」状态标签').toBeVisible()
+    await shot(page, 'L3-03-UI我知道了确认后')
+
+    // 第 2 次 confirm 走 API → 幂等（uk 兜底）
+    const r = expectCode0(await rl(async () => nfy<{ confirmed: boolean }>(
+      await post(`${BASE}/nfy/api/v1/runtime/announcements/${id}/confirm`, undefined, RT(tA, u)))))
+    expect(r.data.confirmed, '第 2 次 confirm 仍 confirmed=true（幂等，uk 兜底）').toBe(true)
     expect(await unconfirmed(tA, u), 'unconfirmed_count 恰好 -1（重复确认不重复扣减）').toBe(before - 1)
     const list = await runtimeList(tA, u)
     expect(list.data.list.find((i) => i.title === title)?.my_status, 'my_status→CONFIRMED').toBe('CONFIRMED')
     await evidence(page, 'L3-03-确认幂等与未确认联动', {
-      步骤: '两次 POST /runtime/announcements/{id}/confirm',
+      步骤: '第 1 次 POST /runtime/announcements/{id}/confirm 经 UI「我知道了」控件；第 2 次直调 API',
       unconfirmed_count: `${before} → ${before - 1}（恰好减 1）`,
       my_status: 'CONFIRMED',
+      UI复核: '「我知道了」点击后呈现「已确认」标签（见 L3-03-UI我知道了确认后.png）',
     })
   })
 
@@ -190,6 +257,7 @@ test.describe('L3 公告线', () => {
       biz_no幂等: { code: dup.code, message: dup.message },
       可见性: { A发布后: true, B: false, A下线后: false },
       重复下线: { code: again.code },
+      证据口径: 'API 面（admin 生命周期状态机/幂等码语义无 UI 表达；公告页消费的是 runtime 生效列表）',
     })
   })
 
@@ -223,6 +291,7 @@ test.describe('L3 公告线', () => {
       平台侧stats边界: { code: stats.code, message: stats.message, 口径: 'PAN 契约=PAN-001~004 无 stats 端点；confirm 核账经 PAN-002 detail.confirm_count 透出（非缺陷）' },
       租户admin面: { code: tenantAdmin.code, message: tenantAdmin.message },
       口径: '第 28 步修复回归：回执按公告归属域(tenant 0)落库，PAN detail confirm_count 可见',
+      证据口径: 'API 面（平台域 detail/stats 与租户 admin 面防探测均无 UI 面）',
     })
   })
 
@@ -253,6 +322,7 @@ test.describe('L3 公告线', () => {
       契约: 'PTE-005：mandatory 唯一设置入口=平台域；租户域 admin/types 不暴露该字段（提交即忽略）',
       步骤: '建类型(mandatory=0) → 平台设 1 → 租户侧读回 1 → 非法值 10100 / 未知租户 10400 → 复位 0',
       校验: { mandatory2: bad.code, 未知租户: ghost.code },
+      证据口径: 'API 面（平台域治理开关无租户 UI 面）',
     })
   })
 })

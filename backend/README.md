@@ -1,10 +1,11 @@
 # notification4j backend
 
-多租户通知中间件（站内信 / 公告 / 渠道订阅 / 外发引擎）。模块：
+后端开发与测试手册（项目定位、快速开始、架构与部署形态总览见根 [README](../README.md)，全部文档见
+[docs/README.md](../docs/README.md)）。Maven 多模块（parent: `notification4j-parent`，framework4j v1.5.1）：
 
-- `notification-spring-boot-starter` —— 业务实现（单测 409）
+- `notification-spring-boot-starter`（artifactId `notification4j-starter`）—— 全量业务实现：三域 API / 服务 / 外发引擎 / NotifyClient 门面 / SPA 托管（单测 411）
 - `notification4j-client-starter` —— 业务方轻量接入（跨进程 remote，零数据面，第 30 步）
-- `notification4j-it` —— 集成测试层（PG+Redis Testcontainers，���库 Flyway 迁移）
+- `notification4j-it` —— 集成测试层（PG16+Redis7 Testcontainers，真库 Flyway 迁移；129 用例 / 28 套件）
 - `notification4j-app` —— 独立部署壳（Flyway baseline / OpenAPI）
 
 所有命令在 `backend/` 目录下执行；`-o` 离线模式（依赖已在本机 m2）。
@@ -15,7 +16,7 @@
 |---|---|---|
 | 单元层 | starter 纯单测（Mockito/独立上下文，无容器） | `mvn -o test -pl notification-spring-boot-starter` |
 | 冒烟层 | 一条顺序链 8 用例跑通核心业务闭环（`@Tag("smoke")`，冷启动 ≤90s） | `mvn -o test -pl notification4j-it -Dgroups=smoke` |
-| 集成层（回归层） | it 模块全量 = 24 个常规 IT 套件（用例相互独立）+ 冒烟套件 | `mvn -o test -pl notification4j-it` |
+| 集成层（回归层） | it 模块全量 = 27 个常规 IT 套件（用例相互独立）+ 1 个冒烟套件，共 28 套件 / 129 用例 | `mvn -o test -pl notification4j-it` |
 | 全部连跑 | 单测 + 集成一条命令两模块（含覆盖率口径合并与 check 门槛） | `mvn -o clean test` |
 
 说明：
@@ -32,9 +33,9 @@
   - 单测口径 `notification-spring-boot-starter/target/site/jacoco/`
   - 合并口径 `notification-spring-boot-starter/target/site/jacoco-merged/`（check 即基于此）
 - 门槛（绑定 starter build 的 test 阶段，`jacoco:check`）：
-  - 门槛一：`dto / entity / kms / tracelog / client / util` 六包行覆盖 **100%**
+  - 门槛一：`dto / entity / kms / tracelog / client / util / controller` 七包行覆盖 **100%**
     （client、util 内两个纯防御 catch 类 `RemoteNotifyClient`、`WebhookSigner` 按类精确排除，仍受门槛二兜底）；
-  - 门槛二：BUNDLE 行覆盖 ≥ **96%**（合并口径实测 96.14%）。
+  - 门槛二：BUNDLE 行覆盖 ≥ **96%**（合并口径实测 96.50%）。
 - 新鲜度：合并取「最近一次 IT 运行」的 exec。改了 starter 代码后请先跑一次集成层（或先 `mvn -o install
   -pl notification-spring-boot-starter -DskipTests -Djacoco.skip=true` 再跑 IT），否则 starter 单独构建时
   合并的是旧 exec，check 可能因口径过期而失败（这是刻意的防回退语义：提示重新跑 IT）。
@@ -62,7 +63,7 @@ java -jar notification4j-app/target/notification4j-app-1.0.0.jar
   `/nfy/api/**`、`/nfy/open/**`、`/nfy/platform/api/**` 优先，静态转发永不覆盖，未映射 API 路径照常 404。
 - app 的 `application.yml` 里 Flyway 独立 datasource（绕 Druid Wall）指向 `localhost:5432/notification4j`，
   生产经 `spring.flyway.*` / `framework4j.datasource.datasources.default.*` 环境变量覆盖。
-- **安全面出厂默认**（2026-09-18 验收回归修复轮，详见 documents/test-report/统一测试报告.md §八）：
+- **安全面出厂默认**（2026-09-18 验收回归修复轮，详见 docs/test/report/2026-09-18-01/统一测试报告.md §八）：
   - `framework4j.signature.path-patterns=[]`——SPA 与 S2S 共用 `/nfy/api/v1/runtime/**`，SPA 端无租户 secret
     无法签名，出厂不对 runtime 强制签名；S2S 需要防重放时把 runtime pattern 加回（yml 注释有示例），
     密钥解析由内置 `NfyTenantSecretProvider` 提供（已排序先于 fwk4j InMemory 兜底注册）。

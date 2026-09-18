@@ -31,3 +31,6 @@ jacoco.exec
 # --- playwright run artifacts ---
 frontend/test-results/
 frontend/playwright-report/
+
+# --- e2e runtime artifacts ---
+frontend/e2e-regression/.runs/

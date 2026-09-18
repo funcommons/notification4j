@@ -6,7 +6,7 @@
 set -e
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 JAR="$ROOT/backend/notification4j-app/target/notification4j-app-1.0.0.jar"
-LOG="$ROOT/documents/test-report/e2e-app.log"
+LOG="$ROOT/frontend/e2e-regression/.runs/e2e-app.log"
 
 export PLATFORM_CLIENT_SECRET=platform-secret-e2e
 export JWT_SECRET=e2e-jwt-secret-e2e-jwt-secret-e2e-123456

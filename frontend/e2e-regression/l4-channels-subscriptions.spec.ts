@@ -1,5 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import dns from 'node:dns/promises'
+import fs from 'node:fs'
+import path from 'node:path'
 import {
   BASE, platformToken, createTenant, nfy, expectCode0, evidence, get, post, put, patch, del, uniq,
   type NfyResp, type Tenant,
@@ -22,10 +24,30 @@ import {
  * 「首次投递时校验」不变）→ PENDING 直启；EMAIL 熔断态重启用=重新验证（fail_count 归 0）；
  * IM（DINGTALK/WECOM/FEISHU）口径不变：未验证/熔断直启仍 10610。需要 ENABLED 态的渠道一律走
  * 真实 API（注册 → PATCH ENABLED）。
+ *
+ * 【第 2 轮证据改版】UI 面用例以真实 SPA 界面截图为关键证据（宿主握手页 hosts/nfy-host.html，
+ * iframe#nfy + NFY_TOKEN 握手，frameLocator('#nfy') 断言）：L4-01 渠道页出现新渠道（PENDING 徽标）、
+ * L4-04 渠道页脱敏目标+ENABLED 徽标、L4-09 订阅页矩阵行回显、L4-10 订阅页强制类型锁定；
+ * SSRF/非法参数/越权等纯 API 面保留 evidence() 渲染页。截图目录 NFY_EVIDENCE_DIR 参数化。
  */
 
 const sigOf = (t: Tenant) => ({ key: t.open_id, secret: t.tenant_secret })
 const opt = (t: Tenant, userid?: string) => ({ token: t.token, userId: userid, sig: sigOf(t) })
+
+// ---------- 第 2 轮证据规约：UI 面用例以真实 SPA 界面截图为关键证据 ----------
+const SHOTS = process.env.NFY_EVIDENCE_DIR
+  ? path.resolve(process.env.NFY_EVIDENCE_DIR)
+  : path.resolve(process.cwd(), '../docs/test/report/local-run/screenshots')
+const HOST = 'http://localhost:3000/nfy-host.html'
+const fl = (p: Page) => p.frameLocator('#nfy')
+
+/** 真实界面截图（fullPage） */
+async function shot(p: Page, name: string): Promise<string> {
+  fs.mkdirSync(SHOTS, { recursive: true })
+  const file = path.join(SHOTS, `${name}.png`)
+  await p.screenshot({ path: file, fullPage: true })
+  return file
+}
 
 interface ChannelVO { channel_id: string; status: string; fail_count: string | number; last_verify_at: string | number | null; name: string; target: string; channel_type: string }
 interface ListResp { list: ChannelVO[] }
@@ -72,6 +94,12 @@ test.describe('L4 渠道与订阅线', () => {
   const dingBody = (name: string) => ({ channel_type: 'DINGTALK', name, target: `https://oapi.dingtalk.com/robot/send?access_token=${uniq('tk')}`, keyword: '通知' })
   const emailBody = (name: string, addr: string) => ({ channel_type: 'EMAIL', name, target: addr })
 
+  /** 打开宿主握手页驱动真实 SPA（iframe#nfy + NFY_TOKEN 握手），返回 iframe frameLocator */
+  const openUI = async (t: Tenant, pageName: string, userid: string) => {
+    await page.goto(`${HOST}?page=${pageName}&token=${t.token}&user_id=${userid}`)
+    return fl(page)
+  }
+
   test('L4-01 CHN-001 自注册渠道成功（PENDING 落库不发验证消息）', async () => {
     // EMAIL 通道：校验器仅做格式校验（零 DNS），环境无关确定性阳性
     const addr = `${uniq('sre')}@e2e.test`
@@ -79,10 +107,20 @@ test.describe('L4 渠道与订阅线', () => {
     expect(r.data.channel_id, 'channel_id 签发').toBeTruthy()
     expect(r.data.status, '注册即 PENDING（不发验证消息，P99≤300ms）').toBe('PENDING')
     expect(r.data.verify_tip, 'verify 引导语').toContain('verify')
+    // 第 2 轮证据规约（UI 面关键图）：渠道页真实 SPA 列表出现该渠道 —— PENDING 状态徽标 + 脱敏目标 + 验证按钮
+    const f = await openUI(tc, 'channels', 'u1')
+    const card = f.locator('.card', { hasText: 'SRE 值班邮箱' })
+    await expect(card).toBeVisible()
+    await expect(card.locator('.fc-tag', { hasText: 'PENDING' })).toBeVisible()
+    await expect(card.locator('.target')).toHaveText(`${addr[0]}***@e2e.test`)
+    await expect(card.getByText('验证')).toBeVisible()
+    await expect(card.getByText('删除')).toHaveCount(0)
+    await shot(page, 'L4-01-渠道页UI-PENDING渠道在列')
     await evidence(page, 'L4-01-自注册渠道成功', {
       请求: 'POST /nfy/api/v1/runtime/channels (channel_type=EMAIL, target=值班邮箱)',
       响应: { code: r.code, channel_id: r.data.channel_id, status: r.data.status, verify_tip: r.data.verify_tip },
       契约: 'PENDING 落库不发验证消息（§5.7 性能预算 P99≤300ms）',
+      UI复核: '渠道页列表出现该渠道：PENDING 徽标 + EMAIL target 脱敏（首字符+***+@域名）+ 仅验证按钮（无启停/删除）',
       'IM 通道注记': 'DINGTALK/FEISHU 白名单阳性见 L4-01b（本环境代理 fake-IP DNS 触发 SSRF 判定，E-L4-01）',
     })
   })
@@ -171,10 +209,18 @@ test.describe('L4 渠道与订阅线', () => {
     const p = await patchCh(tc, 'u4', chId, { status: 'ENABLED' })
     expect(p.code, 'EMAIL PENDING 直启成功（ND-L5-01 修复）').toBe(0)
     expect(p.data.status, '直启后状态 ENABLED').toBe('ENABLED')
+    // 第 2 轮证据规约（UI 面关键图）：渠道页列表脱敏目标 + ENABLED 徽标（启停/删除按钮就位）
+    const f = await openUI(tc, 'channels', 'u4')
+    const card = f.locator('.card', { hasText: '脱敏邮箱渠道' })
+    await expect(card.locator('.fc-tag', { hasText: 'ENABLED' })).toBeVisible()
+    await expect(card.locator('.target')).toHaveText(`${addr[0]}***@e2e.test`)
+    await expect(JSON.stringify(await card.locator('.target').textContent())).not.toContain(addr)
+    await shot(page, 'L4-04-渠道页UI-脱敏目标与ENABLED徽标')
     await evidence(page, 'L4-04-列表脱敏与验证语义', {
       列表脱敏: { target: vo.target, 完整地址: addr.slice(0, 4) + '...(已不可见)', fail_count: 0 },
       验证响应: { code: v.code, message: v.message },
       状态流转: 'PENDING（verify 10604 不迁移）→ patch ENABLED code 0（EMAIL 直启契约，ND-L5-01 已修复）',
+      UI复核: '渠道页卡片：ENABLED 徽标 + target 仍为脱敏形态（完整邮箱任何 UI 面不可见）',
       语义注记: 'IM 未验证直启仍 10610 / 验证成功正例（2xx 且业务码 0）由 NfyChannelFlowTest 深覆盖',
     })
   })
@@ -315,11 +361,28 @@ test.describe('L4 渠道与订阅线', () => {
     expect(s2.data.saved_count).toBe(1)
     m = expectCode0(await getSubs('u9'))
     expect(m.data.items.map((x) => x.type_code), '未提交类型行被全量替换删除').toEqual([codeA])
+    // 第 2 轮证据规约（UI 面关键图）：订阅页真实 SPA 矩阵行回显 PUT 结果
+    // 列 = ENABLED 渠道实例（available_channels.name），行 = 类型；INAPP 列恒选锁定
+    const f = await openUI(ts, 'subscriptions', 'u9')
+    await expect(f.getByRole('heading', { name: '订阅偏好' })).toBeVisible()
+    const rowA = f.locator('.el-table__body-wrapper .el-table__row', { hasText: codeA })
+    const rowB = f.locator('.el-table__body-wrapper .el-table__row', { hasText: codeB })
+    await expect(rowA).toBeVisible()
+    await expect(rowB).toBeVisible()
+    await expect(f.locator('th', { hasText: '邮箱渠道' })).toBeVisible()
+    await expect(f.locator('th', { hasText: '备用邮箱' })).toBeVisible()
+    await expect(rowA.locator('.el-checkbox__input.is-checked'), '行 A 勾选=邮箱渠道（PUT 回显）').toHaveCount(1)
+    await expect(rowA.locator('.el-checkbox__input:not(.is-checked)'), '行 A 其余列未勾选').toHaveCount(2)
+    await expect(rowB.locator('.el-checkbox__input.is-checked'), '行 B 全量替换后无任何勾选').toHaveCount(0)
+    await shot(page, 'L4-09-订阅页UI-PUT回显')
     await evidence(page, 'L4-09-订阅PUT全量替换', {
       提交: `${codeA}=[INAPP,邮箱1,邮箱2] + ${codeB}=[邮箱2] → saved_count=2`,
       回读一致: { [codeA]: itemA.channel_ids, [codeB]: itemB.channel_ids },
       幂等: '重复 PUT 同内容仍 saved_count=2（upsert 不翻倍）',
       全量替换: `仅提交 ${codeA} → saved_count=1，${codeB} 行删除`,
+      UI复核: `订阅页矩阵：行${codeA} 勾选「邮箱渠道」、备用邮箱未勾选；行${codeB} 无勾选（全量替换删行）`,
+      '发现项 E-L4-02（P3，UI 显示）': '「站内信」恒选列渲染为未勾选——SubscriptionsPage.vue 以空串属性 model-value 绑定，EP 判假；与「INAPP 恒选」语义不符（服务端契约不受影响，INAPP 由服务端强制补齐恒首位）',
+      修复意见: '改为 :model-value="true"（Boolean 绑定）；登记不改',
       说明: '渠道实例 ENABLED 态经真实 API（注册 → PATCH ENABLED，ND-L5-01 已修复，见文件头）',
     })
   })
@@ -334,10 +397,21 @@ test.describe('L4 渠道与订阅线', () => {
     expectCode0(await putSubs('u10', [{ type_code: codeM, channel_ids: ['INAPP', dingId] }]))
     // 无实例用户豁免（INAPP 锁定兜底）
     expectCode0(await putSubs('u11', [{ type_code: codeM, channel_ids: ['INAPP'] }]))
+    // 第 2 轮证据规约（UI 面关键图）：订阅页强制类型「强制」徽标 + 唯一实例勾选且禁用（UI 层锁定兜底）
+    const f = await openUI(ts, 'subscriptions', 'u10')
+    const rowM = f.locator('.el-table__body-wrapper .el-table__row', { hasText: codeM })
+    await expect(rowM.getByText('强制', { exact: true })).toBeVisible()
+    await expect(
+      rowM.locator('.el-checkbox[title*="强制类型"] .el-checkbox__input.is-checked'),
+      '强制类型唯一 EMAIL 实例在 UI 上勾选且禁用（不能关闭全部站外渠道）',
+    ).toHaveCount(1)
+    await expect(rowM.locator('.el-checkbox[title*="强制类型"] .el-checkbox__input.is-disabled')).toHaveCount(1)
+    await shot(page, 'L4-10-订阅页UI-强制类型锁定')
     await evidence(page, 'L4-10-强制集类型到实例校验', {
       语义: 'mandatory 类型 default_channels 每渠道类型：有 ENABLED 实例须保留≥1（关最后 10606）；无实例豁免',
       有实例: { 关最后实例: 10606, 保留实例: 'code=0' },
       无实例豁免: 'u11 仅 INAPP → code=0',
+      UI复核: '订阅页行「强制」徽标；唯一实例复选框勾选+禁用（title=强制类型：不能关闭全部站外渠道）',
     })
   })
 

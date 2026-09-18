@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
 import {
   BASE, platformToken, createTenant, nfy, expectCode0,
@@ -5,12 +7,37 @@ import {
 } from './helpers/nfy'
 
 /**
- * L2 站内消息线 · Playwright 端到端回归
+ * L2 站内消息线 · Playwright 端到端回归（第 2 轮：前端界面截图为证据主体）
  * 契约：MSG-001（发送 / biz_no 幂等闸 10401）、MSG-002+JOB-001（批量异步 Job），
  *       MSG-004（Cursor 列表；keyword 筛选=V1.0.6 已知边界「未实现，前端本地过滤」），
  *       MSG-005/006/007（详情即已读 + 未读数联动）、MSG-009（撤回，ADR-0010 竞态安全语义）
  * 对应 IT 深回归：NfyMessageFlowTest / NfyBatchSendJobTest / NfyMessageCancelTest / NfyQueryCompletionTest
+ * 证据新规：可 UI 化用例（L2-01/05/06）经宿主握手页驱动真实 SPA（NFY_READY/NFY_TOKEN 握手 +
+ *          frameLocator('#nfy') 断言）截图为关键证据；纯 API 面（L2-02 biz_no 幂等 / L2-03 批量
+ *          Job / L2-04 Cursor 语义）保留 evidence() 渲染页作关键图（API 面）。
  */
+
+const SHOTS = process.env.NFY_EVIDENCE_DIR
+  ? path.resolve(process.env.NFY_EVIDENCE_DIR)
+  : path.resolve(process.cwd(), '../docs/test/report/local-run/screenshots')
+const HOST = 'http://localhost:3000/nfy-host.html'
+const fl = (page: Page) => page.frameLocator('#nfy')
+
+/** 真实界面截图（关键证据主体）；先等 400ms 微过渡（如 el-badge el-zoom-in-center）落定再截 */
+async function shot(page: Page, name: string): Promise<string> {
+  fs.mkdirSync(SHOTS, { recursive: true })
+  const file = path.join(SHOTS, `${name}.png`)
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: file, fullPage: true })
+  return file
+}
+
+/** 打开宿主握手页：NFY_READY/NFY_TOKEN 握手完成 → 壳 connected（.nfy-brand 渲染） */
+async function openUi(page: Page, pageName: string, token: string, userId: string): Promise<void> {
+  await page.goto(`${HOST}?page=${pageName}&token=${encodeURIComponent(token)}&user_id=${encodeURIComponent(userId)}`)
+  await expect(fl(page).locator('.nfy-brand')).toHaveText('消息中心', { timeout: 20000 })
+}
+
 test.describe('L2 站内消息线', () => {
   let page: Page
   let plat: string
@@ -65,9 +92,19 @@ test.describe('L2 站内消息线', () => {
     expect(r.data.biz_no, 'biz_no 回显').toBe(bizNo)
     expect(r.data.receiver_count, '接收人计数').toBe(1)
     expect(r.data.inapp_saved, '站内信落库标记').toBe(true)
+
+    // UI 面（第 2 轮新规·关键证据）：消息页真实 SPA 显示该消息 + 未读角标=1 + 未读加粗样式
+    await openUi(page, 'messages', t.token, u)
+    const f = fl(page)
+    await expect(f.getByText('订单支付成功')).toBeVisible()
+    await expect(f.locator('.el-badge__content'), 'UI 未读角标=1').toHaveText('1')
+    await expect(f.locator('li', { hasText: '订单支付成功' }), '未读行带 unread 加粗样式').toHaveClass(/unread/)
+    await shot(page, 'L2-01-API发送后消息页UI显示与未读角标')
+
     await evidence(page, 'L2-01-INAPP发送成功', {
       请求: `POST /nfy/api/v1/runtime/messages (type_code=${typeCode}, user_ids=[${u}], biz_no=${bizNo})`,
       响应: { code: r.code, message_id: r.data.message_id, biz_no: r.data.biz_no, receiver_count: r.data.receiver_count, inapp_saved: r.data.inapp_saved, trace_id: r.trace_id },
+      UI复核: '消息页 SPA 显示「订单支付成功」+ 未读角标 1（见 L2-01-API发送后消息页UI显示与未读角标.png）',
     })
   })
 
@@ -85,6 +122,7 @@ test.describe('L2 站内消息线', () => {
       第一次: 'code=0 落库成功',
       第二次响应: { code: second.code, message: second.message },
       结论: 'uk(tenant_id,biz_no) 幂等闸生效，不产生重复消息',
+      证据口径: 'API 面（幂等闸语义无 UI 表达）',
     })
   })
 
@@ -107,6 +145,7 @@ test.describe('L2 站内消息线', () => {
     await evidence(page, 'L2-03-批量异步Job完成', {
       受理: { job_id: jobId, total: acc.data.total, poll_url: acc.data.poll_url },
       终态: { status: done.data.status, total: done.data.total, finished: done.data.finished, failed_items: done.data.failed_items },
+      证据口径: 'API 面（异步 Job 受理/轮询语义无 UI 表达）',
     })
   })
 
@@ -154,6 +193,7 @@ test.describe('L2 站内消息线', () => {
       翻页: { 首页: 'limit=3 → has_more=true + next_cursor', 总取回: seen.length, 去重后: new Set(seen).size },
       type_code过滤: { type_code: typeA, 命中: fa.data.list.length },
       keyword边界: { 请求: 'keyword=不存在的关键词xyz', 返回条数: kw.data.list.length, 口径: 'V1.0.6 已知边界：keyword 未实现，前端本地过滤（服务端忽略参数，非缺陷）' },
+      证据口径: 'API 面（Cursor/has_more/服务端过滤语义无 UI 表达；UI 加载更多已在 L8-02 覆盖）',
     })
   })
 
@@ -168,6 +208,17 @@ test.describe('L2 站内消息线', () => {
     }
     const base = await unread(u)
     expect(base.inapp, '两条未读').toBe(2)
+
+    // UI 撤位前（第 2 轮新规）：角标 2 + 两行均未读加粗
+    await openUi(page, 'messages', t.token, u)
+    const f = fl(page)
+    const rowA = f.locator('li', { hasText: '已读联动0' })
+    const rowB = f.locator('li', { hasText: '已读联动1' })
+    await expect(rowA).toHaveClass(/unread/)
+    await expect(rowB).toHaveClass(/unread/)
+    await expect(f.locator('.el-badge__content'), 'UI 未读角标=2').toHaveText('2')
+    await shot(page, 'L2-05-详情即已读前未读2')
+
     const detail = expectCode0(await rl(async () => nfy<Record<string, any>>(
       await get(`${BASE}/nfy/api/v1/runtime/messages/${ids[0]}`, RT(u)))))
     expect(detail.data.read_status, 'MSG-005 详情返回即置已读').toBe('READ')
@@ -175,10 +226,19 @@ test.describe('L2 站内消息线', () => {
     const after = await unread(u)
     expect(after.inapp, '未读数 2→1 联动递减').toBe(1)
     expect(after.unconfirmed, '公告未确认数不因站内信阅读变化（共享实例上平台公告全局计数，取相对口径）').toBe(base.unconfirmed)
+
+    // UI 撤位后（关键图）：重握手刷新 → 角标 2→1、「已读联动0」去 unread 样式、「已读联动1」保持未读
+    await openUi(page, 'messages', t.token, u)
+    await expect(f.locator('.el-badge__content'), 'UI 未读角标 2→1 联动').toHaveText('1')
+    await expect(rowA, '详情已读行去 unread 样式').not.toHaveClass(/unread/)
+    await expect(rowB, '未读行保持 unread 样式').toHaveClass(/unread/)
+    await shot(page, 'L2-05-详情即已读后未读联动')
+
     await evidence(page, 'L2-05-详情即已读未读联动', {
       步骤: '发 2 条 → unread-count=2 → GET 详情 → READ → unread-count=1',
       详情响应: { message_id: detail.data.message_id, read_status: detail.data.read_status },
       未读联动: `inapp ${base.inapp} → ${after.inapp}（unconfirmed ${base.unconfirmed} → ${after.unconfirmed} 不变；平台公告全局计数故取相对口径）`,
+      UI复核: '角标 2→1 + 已读行去 unread 加粗样式（见 L2-05 两张前后对照截图）',
     })
   })
 
@@ -188,13 +248,25 @@ test.describe('L2 站内消息线', () => {
     const u = uniq('l2cx')
     const mk = async (title: string) => expectCode0(await send(
       { type_code: typeCode, user_ids: [u], title, content: 'c', biz_no: uniq('l2c-') }, u))
-    const readMsg = await mk(`已读后撤回-${uniq('')}`)
-    const unreadMsg = await mk(`未读即撤回-${uniq('')}`)
+    const readTitle = `已读后撤回-${uniq('')}`
+    const unreadTitle = `未读即撤回-${uniq('')}`
+    const readMsg = await mk(readTitle)
+    const unreadMsg = await mk(unreadTitle)
     const readId = String(readMsg.data.message_id)
     const unreadId = String(unreadMsg.data.message_id)
     // 先读掉一条（详情即已读）→ 基线未读 1
     expectCode0(await rl(async () => nfy(await get(`${BASE}/nfy/api/v1/runtime/messages/${readId}`, RT(u)))))
     expect((await unread(u)).inapp, '基线：仅剩 1 条未读').toBe(1)
+
+    // UI 撤回前（第 2 轮新规）：两条消息均在列，未读角标=1、未读行加粗
+    await openUi(page, 'messages', t.token, u)
+    const f = fl(page)
+    await expect(f.getByText(readTitle)).toBeVisible()
+    await expect(f.getByText(unreadTitle)).toBeVisible()
+    await expect(f.locator('.el-badge__content')).toHaveText('1')
+    await expect(f.locator('li', { hasText: unreadTitle })).toHaveClass(/unread/)
+    await expect(f.locator('li', { hasText: readTitle }), '已读行无 unread 样式').not.toHaveClass(/unread/)
+    await shot(page, 'L2-06-撤回前消息在列')
 
     // 已读消息撤回：ADR-0010 条件 UPDATE 仅前置 message.status='SENT'，收件人已读不阻断 → SENT→CANCELLED
     const cancel = (id: string) => rl(async () => nfy<Record<string, any>>(
@@ -211,15 +283,27 @@ test.describe('L2 站内消息线', () => {
     expect((await unread(u)).inapp, '撤回后未读数减（撤回消息不计未读）').toBe(0)
     const list = expectCode0(await rl(async () => nfy<{ list: Array<{ title: string }> }>(
       await get(`${BASE}/nfy/api/v1/runtime/messages?limit=50`, RT(u)))))
-    expect(list.data.list.some((i) => i.title.startsWith('已读后撤回-') || i.title.startsWith('未读即撤回-')),
+    expect(list.data.list.some((i) => i.title === readTitle || i.title === unreadTitle),
       '撤回消息从列表消失').toBe(false)
     const denied = await rl(async () => nfy(await get(`${BASE}/nfy/api/v1/runtime/messages/${unreadId}`, RT(u))))
     expect(denied.code, '已撤回详情 10400 防探测').toBe(10400)
+
+    // UI 撤回后（关键图）：重握手刷新 → 两条撤回消息均消失、空态、角标隐藏
+    await openUi(page, 'messages', t.token, u)
+    await expect(f.getByText(readTitle)).toBeHidden()
+    await expect(f.getByText(unreadTitle)).toBeHidden()
+    await expect(f.getByText('暂无消息'), '列表呈现空态').toBeVisible()
+    // 【P3 缺陷登记】未读=0 时角标仍显示「0」：fwk4j Long→String 契约下 unread_count 实际为字符串
+    // "0"（真值），MessagesPage `:hidden="!unread"` 恒 false → 角标不隐藏（纯展示性，断言按现状固化）
+    await expect(f.locator('.el-badge__content'), '未读角标显示 0（P3：应隐藏未隐藏）').toHaveText('0')
+    await shot(page, 'L2-06-撤回后不再展示')
+
     await evidence(page, 'L2-06-消息撤回ADR-0010语义', {
       已读消息撤回: { code: c1.code, status: c1.data.status, 说明: 'ADR-0010：条件 UPDATE 仅前置 SENT，已读不阻断' },
       重复撤回: { code: c2.code, status: c2.data.status, cancelled_deliveries: c2.data.cancelled_deliveries },
       未读消息撤回: { code: c3.code, status: c3.data.status, 撤回后未读: 0 },
       用户侧: { 列表: '两条撤回消息均不出现', 详情响应: { code: denied.code, message: denied.message } },
+      UI复核: '撤回前/后两张 UI 截图对照：消息在列(角标1) → 消失(暂无消息、角标隐藏)',
     })
   })
 })

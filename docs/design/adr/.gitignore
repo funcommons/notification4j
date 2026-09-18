@@ -1,0 +1,4 @@
+
+# --- e2e runtime artifacts ---
+frontend/e2e-regression/.runs/
+documents/test-report/
