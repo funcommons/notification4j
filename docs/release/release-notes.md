@@ -6,6 +6,32 @@
 
 ---
 
+## v1.3.0 — 接入摩擦修复轮（issue #1/#2/#3 + framework4j v1.7.1）
+
+- **发布日期**：2026-09-19（commit 见 git tag `v1.3.0`）
+- **版本口径**：**Maven 坐标自此与 tag 一致（1.3.0）**，清除 v1.2.2 注册在案的版本错位
+
+### 新增
+
+| 项 | 内容 |
+|---|---|
+| **API-OEM-001**（issue #1） | `GET /nfy/api/v1/runtime/oem/hosts` 下发本租户 oem.hosts；嵌入消息中心 origin 白名单双面生效：构建时 `VITE_NFY_PARENT_ORIGINS` ∪ 运行时 `oem.hosts`（iframe 持候选 token 核验，命中才接受 NFY_TOKEN，fail-closed）；运营时可配、无需重打前端 |
+| **数据面接管**（issue #3） | `NfyDataPlaneTakeoverFilter`（AutoConfigurationImportFilter，先例 lotask4j）：接入方只配 `framework4j.datasource.datasources.*` 即可启动——无需 `spring.datasource.*`（消除「Failed to configure a DataSource」与同库双池）、无需 `spring.autoconfigure.exclude`；闸门 `framework4j.datasource.enabled` / `framework4j.redis.enabled` / 总闸 `nfy.enabled` |
+| **ID 生成器兜底**（issue #2） | `NfyMybatisPlusSupportAutoConfiguration`（before MybatisPlusAutoConfiguration，`@ConditionalOnMissingBean`）——接入方零配置即得雪花 id，自有 bean 自然让位 |
+
+### 变更
+
+- framework4j **v1.5.1 → v1.7.1**（web advice 拆分 / accesstoken 启动校验 fail-fast / token 自包含 embed-claims / advice 排序修复）；nfy 侧 Boot 3.2.7 / MP 3.5.7 钉版不变，全量回归零适配通过
+- app 壳配置瘦身：删除 dev `spring.datasource.*` 与 `spring.autoconfigure.exclude`（filter 接管）；**单池实证**（原生 Druid wrapper 0 / Hikari 0）
+- pom `1.0.0 → 1.3.0`
+
+### 验收
+
+- 四层全绿：starter 单测 **411/411**（双 JaCoCo 门槛，合并 96.66%）· IT **135/135**（30 套件，+6 新用例）· vitest **386/386** · E2E **72/72**（L8 +2）
+- 测试报告：`docs/test/report/2026-09-19-01/`
+
+---
+
 ## v1.2.2 — 验收回归修复轮（缺陷台账清零）
 
 - **发布日期**：2026-09-18（Release 发布于 2026-09-17T23:35Z，commit `a91f7a9`）

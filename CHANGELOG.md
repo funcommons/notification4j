@@ -3,8 +3,30 @@
 本项目所有显著变更记录于此。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-> 版本号口径说明：git tag / GitHub Release 的 v1.2.2 对齐接口文档（`docs/api/api-spec.md`）修订史 V1.2.2；
-> Maven 坐标（`backend/pom.xml`，当前 1.0.0）与前端 `package.json` 版本计划在下个交付窗口统一 bump。
+> 版本号口径说明：git tag / GitHub Release 的 vX.Y.Z 对齐接口文档（`docs/api/api-spec.md`）修订史；
+> Maven 坐标（`backend/pom.xml`，当前 1.3.0）与 tag 自 v1.3.0 起一致。
+
+## [1.3.0] — 2026-09-19
+
+接入摩擦修复轮：MMagiX2 薄壳接入实测暴露的 3 个 issue 全部修复 + framework4j 升级。Maven 坐标自此与 tag 一致（1.3.0）。
+
+### Added
+
+- **API-OEM-001 `GET /nfy/api/v1/runtime/oem/hosts`（issue #1）**：下发本租户 oem.hosts（T 鉴权无 U，同 DICT-001 口径）。嵌入消息中心 postMessage origin 白名单自此**双面生效**：构建时 `VITE_NFY_PARENT_ORIGINS` ∪ 运行时 `oem.hosts`——构建时名单外的父页 origin，iframe 持候选 token 调本端点核验，命中才接受 NFY_TOKEN（`useEmbedHandshake` 新增 `fetchExtraOrigins`，同 token 在途去重、失败 fail-closed 忽略）。修前 oem.hosts 仅有平台面写入与存储、无任何消费方（白名单实际只有前端构建时半边）。运营时可配，无需重打前端。
+- **数据面接管过滤器 `NfyDataPlaneTakeoverFilter`（issue #3）**：starter 以 `AutoConfigurationImportFilter`（`META-INF/spring.factories` 注册，先例 lotask4j）接管原生装配——`framework4j.datasource.enabled=true` 时 veto `DataSourceAutoConfiguration` / `DruidDataSourceAutoConfigure` / `MybatisPlusAutoConfiguration` / `DataSourceTransactionManagerAutoConfiguration`（framework4j 多数据源成唯一池源：单池 + 单 SqlSessionFactory）；`framework4j.redis.enabled=true` 时 veto `RedissonAutoConfigurationV2/V4`；总闸 `nfy.enabled=false` 全放行。接入方只配 `framework4j.datasource.datasources.default.*` 即可启动，**无需** `spring.datasource.*`、**无需** `spring.autoconfigure.exclude`；自管数据面的宿主不受影响。
+- **ID 生成器兜底 `NfyMybatisPlusSupportAutoConfiguration`（issue #2）**：`before = MybatisPlusAutoConfiguration` 注册 `@ConditionalOnMissingBean IdentifierGenerator → DefaultIdentifierGenerator`，接入方零配置即得雪花 id（自有 bean 自然让位）。三重兜底口径：MP 3.5.7 SSF builder 自带 NetUtils 兜底、framework4j-id `mpIdGenerator` 缺省启用、本 bean 显式装配缝（app 壳同款 config 收编删除）。
+
+### Changed
+
+- **framework4j v1.5.1 → v1.7.1**：吸收 web advice 拆分（DataAccessExceptionAdvice + @ConditionalOnClass(spring-jdbc)）、accesstoken 启动期 fail-fast 校验（secretKey≥32/hashSalt/policies 清单式报错）、token 自包含（`embed-claims` 缺省 true，payload 携带 tenant_id）、advice 排序修复。零适配成本（全量回归直接通过）；nfy 侧 Spring Boot 3.2.7 / MyBatis-Plus 3.5.7 钉版不变。
+- **app 壳配置瘦身**：删除 dev profile `spring.datasource.*` 冗余段与 `spring.autoconfigure.exclude` 手工项（filter 接管）；单池实证——启动日志原生 Druid wrapper 0 / Hikari 0 / framework4j `defaultDataSource @Primary` 唯一。
+- pom `1.0.0 → 1.3.0`：Maven 坐标与 tag 对齐（清掉注册在案的版本错位）。
+
+### 验收数据（出厂等价实例）
+
+- 后端：starter 单元测试 **411/411**（双 JaCoCo 门槛，合并口径 96.66%）· 全量 IT **135/135**（30 套件；新增 `NfyRuntimeOemTest`×4 + `NfyDataPlaneTakeoverTest`×2）
+- 端到端：Playwright **72/72**（L8 新增 L8-09 运行时白名单命中 / L8-10 未命中拒绝）· 前端 vitest **386** 全绿（+4 握手运行时白名单用例）
+- 测试报告：`docs/test/report/2026-09-19-01/`（本轮修复验证报告 + 截图证据）
 
 ## [1.2.2] — 2026-09-18
 

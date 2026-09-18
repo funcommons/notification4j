@@ -1,11 +1,11 @@
 # notification4j backend
 
 后端开发与测试手册（项目定位、快速开始、架构与部署形态总览见根 [README](../README.md)，全部文档见
-[docs/README.md](../docs/README.md)）。Maven 多模块（parent: `notification4j-parent`，framework4j v1.5.1）：
+[docs/README.md](../docs/README.md)）。Maven 多模块（parent: `notification4j-parent`，framework4j v1.7.1）：
 
 - `notification-spring-boot-starter`（artifactId `notification4j-starter`）—— 全量业务实现：三域 API / 服务 / 外发引擎 / NotifyClient 门面 / SPA 托管（单测 411）
 - `notification4j-client-starter` —— 业务方轻量接入（跨进程 remote，零数据面，第 30 步）
-- `notification4j-it` —— 集成测试层（PG16+Redis7 Testcontainers，真库 Flyway 迁移；129 用例 / 28 套件）
+- `notification4j-it` —— 集成测试层（PG16+Redis7 Testcontainers，真库 Flyway 迁移；135 用例 / 30 套件）
 - `notification4j-app` —— 独立部署壳（Flyway baseline / OpenAPI）
 
 所有命令在 `backend/` 目录下执行；`-o` 离线模式（依赖已在本机 m2）。
@@ -16,7 +16,7 @@
 |---|---|---|
 | 单元层 | starter 纯单测（Mockito/独立上下文，无容器） | `mvn -o test -pl notification-spring-boot-starter` |
 | 冒烟层 | 一条顺序链 8 用例跑通核心业务闭环（`@Tag("smoke")`，冷启动 ≤90s） | `mvn -o test -pl notification4j-it -Dgroups=smoke` |
-| 集成层（回归层） | it 模块全量 = 27 个常规 IT 套件（用例相互独立）+ 1 个冒烟套件，共 28 套件 / 129 用例 | `mvn -o test -pl notification4j-it` |
+| 集成层（回归层） | it 模块全量 = 29 个常规 IT 套件（用例相互独立）+ 1 个冒烟套件，共 30 套件 / 135 用例 | `mvn -o test -pl notification4j-it` |
 | 全部连跑 | 单测 + 集成一条命令两模块（含覆盖率口径合并与 check 门槛） | `mvn -o clean test` |
 
 说明：
@@ -35,7 +35,7 @@
 - 门槛（绑定 starter build 的 test 阶段，`jacoco:check`）：
   - 门槛一：`dto / entity / kms / tracelog / client / util / controller` 七包行覆盖 **100%**
     （client、util 内两个纯防御 catch 类 `RemoteNotifyClient`、`WebhookSigner` 按类精确排除，仍受门槛二兜底）；
-  - 门槛二：BUNDLE 行覆盖 ≥ **96%**（合并口径实测 96.50%）。
+  - 门槛二：BUNDLE 行覆盖 ≥ **96%**（合并口径实测 96.66%）。
 - 新鲜度：合并取「最近一次 IT 运行」的 exec。改了 starter 代码后请先跑一次集成层（或先 `mvn -o install
   -pl notification-spring-boot-starter -DskipTests -Djacoco.skip=true` 再跑 IT），否则 starter 单独构建时
   合并的是旧 exec，check 可能因口径过期而失败（这是刻意的防回退语义：提示重新跑 IT）。
@@ -45,14 +45,14 @@
 ### 独立部署形态（notification4j-app fat jar）
 
 ```bash
-# 构建（repackage 后 notification4j-app-1.0.0.jar 为可执行 fat jar，原 thin jar 存为 .jar.original）
+# 构建（repackage 后 notification4j-app-1.3.0.jar 为可执行 fat jar，原 thin jar 存为 .jar.original）
 cd backend && mvn -o package -pl notification4j-app -DskipTests
 
 # 运行（前置：PG 5432 + Redis 6379；机密经环境变量注入，不入库不入 git）
 JWT_SECRET=<32B+ 随机串> \
 AES_KEY=<32B 随机串> \
 PLATFORM_CLIENT_SECRET=<平台域密钥> \
-java -jar notification4j-app/target/notification4j-app-1.0.0.jar
+java -jar notification4j-app/target/notification4j-app-1.3.0.jar
 ```
 
 - `server.port=9200`；控制台入口 `http://localhost:9200/`（消息中心 app 壳 `/nfy/tenant/app/messages`
@@ -69,8 +69,37 @@ java -jar notification4j-app/target/notification4j-app-1.0.0.jar
     密钥解析由内置 `NfyTenantSecretProvider` 提供（已排序先于 fwk4j InMemory 兜底注册）。
   - druid `filters: stat,slf4j`——wall 不兼容 PG 方言（`FOR UPDATE OF d SKIP LOCKED`、部分索引谓词），
     开启会拦死外发引擎与 Flyway；如需 wall 请先验证这两条链路。
-  - `spring.autoconfigure.exclude` 排除传递引入的 redisson-spring-boot-starter（其端点取
-    `spring.data.redis` 默认 6379，不随 `framework4j.redis` 覆盖）。
+  - redisson 原生装配（RedissonAutoConfigurationV2/V4，端点取 `spring.data.redis` 默认 6379、
+    不随 `framework4j.redis` 覆盖）与数据面原生装配由 `NfyDataPlaneTakeoverFilter` 统一接管（V1.3，
+    见下「数据面接管」），app 壳不再需要 `spring.autoconfigure.exclude` 手工项。
+
+### 数据面接管（V1.3，GitHub issue #3）
+
+framework4j 多数据源经 ImportBeanDefinitionRegistrar 注册 DataSource/SqlSessionFactory，
+但自动配置字典序排在原生装配之后——druid 原生 `DruidDataSourceAutoConfigure`
+（matchIfMissing=true）会先注册 DruidDataSourceWrapper 并向 `spring.datasource.*` 索要 url：
+只配 `framework4j.datasource.datasources.*` 的接入方启动即报
+「Failed to configure a DataSource: 'url' attribute is not specified」，补配 spring.datasource.*
+又得到同库双池。starter 现以 `NfyDataPlaneTakeoverFilter`（`AutoConfigurationImportFilter`，
+`META-INF/spring.factories` 注册，先例 lotask4j）接管：
+
+| 闸门（缺省） | 生效动作 |
+|---|---|
+| `framework4j.datasource.enabled=true` | veto 原生 `DataSourceAutoConfiguration` / `DruidDataSourceAutoConfigure` / `MybatisPlusAutoConfiguration` / `DataSourceTransactionManagerAutoConfiguration` —— framework4j 多数据源成唯一池源（单池 + 单 SqlSessionFactory） |
+| `framework4j.redis.enabled=true` | veto 原生 `RedissonAutoConfigurationV2/V4`（产品全链零 redisson，见 D-4） |
+| `nfy.enabled=false`（总闸） | 全部放行，宿主恢复原生装配 |
+
+接入方只配 `framework4j.datasource.datasources.default.*` 即可启动，**无需** `spring.datasource.*`、
+**无需** `spring.autoconfigure.exclude`；数据面关掉（自管 spring.datasource + MP 原生装配）的宿主完全不受影响。
+验证：`NfyDataPlaneTakeoverTest`（裸壳零手工 exclude 的嵌入形态 IT）。
+
+### ID 生成器兜底（V1.3，GitHub issue #2）
+
+`nfya_*` 主键 `IdType.ASSIGN_ID`（framework4j `TenantEntity`）。starter 自带
+`NfyMybatisPlusSupportAutoConfiguration`（`before = MybatisPlusAutoConfiguration` 注册
+`@ConditionalOnMissingBean IdentifierGenerator → DefaultIdentifierGenerator`），接入方零配置即得
+雪花 id（自有生成器 bean 自然让位）。三重兜底口径：MP 3.5.7 `MybatisSqlSessionFactoryBuilder`
+对未配置生成器的 SSF 自带 NetUtils 兜底、framework4j-id `mpIdGenerator` 缺省启用、本 bean 显式装配缝。
 
 ### 嵌入接入形态（业务方引 starter）
 
@@ -78,7 +107,7 @@ java -jar notification4j-app/target/notification4j-app-1.0.0.jar
 <dependency>
     <groupId>fun.commons.notification4j</groupId>
     <artifactId>notification4j-starter</artifactId>
-    <version>1.0.0</version>
+    <version>1.3.0</version>
 </dependency>
 ```
 
@@ -113,7 +142,7 @@ public class HostApplication { ... }
 <dependency>
     <groupId>fun.commons.notification4j</groupId>
     <artifactId>notification4j-client-starter</artifactId>
-    <version>1.0.0</version>
+    <version>1.3.0</version>
 </dependency>
 ```
 

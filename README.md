@@ -5,7 +5,7 @@
 查看通知、自注册 IM 群 webhook 渠道、配置「消息类型 × 渠道」订阅矩阵；独立部署形态
 内置外发引擎，将站内消息投递到钉钉 / 企微 / 飞书 / 邮件。
 
-> 基于 framework4j v1.5.1 构建 · JDK 17 · Spring Boot 3.2.7 · PostgreSQL 16 · Redis 7
+> 基于 framework4j v1.7.1 构建 · JDK 17 · Spring Boot 3.2.7 · PostgreSQL 16 · Redis 7
 
 [![Release](https://img.shields.io/github/v/tag/funcommons/notification4j?label=release&sort=semver)](https://github.com/funcommons/notification4j/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -14,7 +14,7 @@
 
 > **在线阅读文档**：全部文档随仓库发布，GitHub 直接渲染——入口 [docs/README.md](docs/README.md)
 > （需求 PRD / 概要设计 / 接口契约 / 部署手册 / 用户手册 / 测试计划与报告 / ADR / 发布说明）。
-> Maven 依赖可通过 JitPack 按 tag 引入：`com.github.funcommons.notification4j:notification4j-starter:v1.2.2`。
+> Maven 依赖可通过 JitPack 按 tag 引入：`com.github.funcommons.notification4j:notification4j-starter:v1.3.0`。
 
 ## 特性
 
@@ -30,12 +30,12 @@
 
 ### 1. 后端构建与测试
 
-前置：JDK 17、本机 Docker（集成测试用 Testcontainers 拉起 PG16 + Redis7）；framework4j v1.5.1 已在本机 m2。
+前置：JDK 17、本机 Docker（集成测试用 Testcontainers 拉起 PG16 + Redis7）；framework4j v1.7.1 已在本机 m2。
 
 ```bash
 cd backend
 mvn -o install -DskipTests            # 构建四模块并安装 starter 到本地仓库
-mvn -o test -pl notification4j-it     # 集成测试 129 用例（28 套件）
+mvn -o test -pl notification4j-it     # 集成测试 135 用例（30 套件）
 ```
 
 只跑冒烟层（一条顺序链跑通核心业务闭环）：`mvn -o test -pl notification4j-it -Dgroups=smoke`。
@@ -44,7 +44,7 @@ mvn -o test -pl notification4j-it     # 集成测试 129 用例（28 套件）
 
 ```bash
 cd backend
-mvn -o package -pl notification4j-app -DskipTests   # 产物 notification4j-app-1.0.0.jar（fat jar）
+mvn -o package -pl notification4j-app -DskipTests   # 产物 notification4j-app-1.3.0.jar（fat jar）
 ```
 
 前置：PostgreSQL 16 + Redis 7（出厂配置指向 `localhost:5432` / `6379`）；三个机密环境变量 fail-fast、无默认值。
@@ -53,7 +53,7 @@ mvn -o package -pl notification4j-app -DskipTests   # 产物 notification4j-app-
 JWT_SECRET=<32B+ 随机串> \
 AES_KEY=<32B 随机串> \
 PLATFORM_CLIENT_SECRET=<平台域密钥> \
-java -jar notification4j-app/target/notification4j-app-1.0.0.jar
+java -jar notification4j-app/target/notification4j-app-1.3.0.jar
 ```
 
 启动后：消息中心控制台 `http://localhost:9200/`（SPA 由 jar 直接托管），OpenAPI
@@ -68,7 +68,7 @@ docker start nfy4j-e2e-pg nfy4j-e2e-redis
 bash frontend/e2e-regression/bin/start-app.sh        # 启动出厂等价测试实例 :9200（引擎提速旋钮）
 cd frontend
 NFY_EVIDENCE_DIR=../docs/test/report/local-run/screenshots \
-  npx playwright test -c e2e-regression/playwright.config.ts   # 70 用例 · L1~L8 八条业务线
+  npx playwright test -c e2e-regression/playwright.config.ts   # 72 用例 · L1~L8 八条业务线
 ```
 
 ## 架构一分钟
@@ -108,10 +108,10 @@ notifyClient.send(tenantId, SendMessageRequest.of(
 | 层 | 命令 | 规模 |
 |---|---|---|
 | 后端单元（starter 纯单测） | `mvn -o test -pl notification-spring-boot-starter` | 411 用例 |
-| 后端集成（Testcontainers） | `mvn -o test -pl notification4j-it` | 129 用例 / 28 套件 |
+| 后端集成（Testcontainers） | `mvn -o test -pl notification4j-it` | 135 用例 / 30 套件 |
 | 冒烟（集成层子集） | `mvn -o test -pl notification4j-it -Dgroups=smoke` | 8 用例顺序链 |
-| 前端组件单测 | `cd frontend && pnpm vitest run` | 382 用例 |
-| E2E 回归（Playwright） | `npx playwright test -c e2e-regression/playwright.config.ts` | 70 用例 / 8 业务线 |
+| 前端组件单测 | `cd frontend && pnpm vitest run` | 386 用例 |
+| E2E 回归（Playwright） | `npx playwright test -c e2e-regression/playwright.config.ts` | 72 用例 / 8 业务线 |
 
 覆盖率双门槛（合并口径 = starter 单测 exec + IT exec）：`dto / entity / kms / tracelog / client /
 util / controller` 七包行覆盖 100%；整体 BUNDLE 行覆盖 ≥ 96%。明细见

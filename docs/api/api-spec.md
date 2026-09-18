@@ -27,6 +27,7 @@
 
 | 版本号 | 修订日期 | 修订类型 | 修订内容摘要 | 修订人 | 审核 / 批准人 |
 |---|---|---|---|---|---|
+| V1.3.0 | 2026-09-19 | 变更 | 接入摩擦修复轮（GitHub issue #1/#2/#3）+ framework4j 升级 v1.5.1→v1.7.1。**API-OEM-001（新增，#52）**：`GET /nfy/api/v1/runtime/oem/hosts` 下发本租户 oem.hosts（T 鉴权无 U，同 DICT-001 口径）——嵌入消息中心 postMessage origin 白名单的运行时面：构建时名单（VITE_NFY_PARENT_ORIGINS）外父页 origin，iframe 持候选 token 调本端点核验，命中才接受 NFY_TOKEN（useEmbedHandshake fetchExtraOrigins，同 token 在途去重、失败 fail-closed 忽略）；修前 oem.hosts 仅有平台面写入与存储、无任何消费方，白名单实际只有前端构建时半边。**数据面接管（issue #3）**：starter 新增 NfyDataPlaneTakeoverFilter（AutoConfigurationImportFilter，spring.factories 注册，先例 lotask4j）——framework4j.datasource.enabled=true 时 veto 原生 DataSourceAutoConfiguration/DruidDataSourceAutoConfigure/MybatisPlusAutoConfiguration/DataSourceTransactionManagerAutoConfiguration（根因：framework4j registrar 字典序在原生装配之后，druid 原生 wrapper 先行索要 spring.datasource.url 启动即炸、补配则同库双池）；framework4j.redis.enabled=true 时 veto RedissonAutoConfigurationV2/V4（D-4 接管 app 壳手工 exclude）；总闸 nfy.enabled=false 全放行。app 壳删除 dev profile spring.datasource.* 冗余段（单池实证：原生 Druid wrapper 0 / Hikari 0 / framework4j @Primary 单池）。新增 NfyDataPlaneTakeoverTest（裸壳零手工 exclude 的嵌入形态验证）。**ID 生成器兜底（issue #2）**：starter 新增 NfyMybatisPlusSupportAutoConfiguration（before MybatisPlusAutoConfiguration 注册 @ConditionalOnMissingBean IdentifierGenerator→DefaultIdentifierGenerator，app 壳同款 config 收编删除）；注：MP 3.5.7 MybatisSqlSessionFactoryBuilder 自带 NetUtils 兜底 + framework4j-id mpIdGenerator 缺省启用，本 bean 为确定性装配缝（三重兜底） | justin | 接入摩擦修复轮 |
 | V1.2.2 | 2026-09-18 | 变更 | 验收回归修复轮（P0×3+P1+P2×3，台账见 docs/test/report/2026-09-18-01/统一测试报告.md §八）。**签名面出厂语义变更（D-1）**：app 出厂 `framework4j.signature.path-patterns=[]`——SPA 与 S2S 共用 `/nfy/api/v1/runtime/**` 路径，强制签名使嵌入面（浏览器端无租户 secret 可签）全拒 10101；出厂摘除强制面，`enabled:true` 与密钥解析基础设施保留，S2S 需要防重放时自行加回 pattern（示例见 app yml 注释）。**签名密钥解析修复（D-2）**：`NfyAutoConfiguration` 补 `@AutoConfigureBefore(SignatureAutoConfiguration)` 并移除 `nfyTenantSecretProvider` 的 `@ConditionalOnMissingBean`——修前 fwk4j InMemory 兜底抢先注册、本项目 Bean 让位，正确签名的调用也全拒 10200；修后真实租户签名调用端到端打通，新增 NfySignatureFaceTest 防回归（enabled+patterns 下未签名 10101 / 真实租户签名 code=0 双钉）。**渠道使能修复（ND-L5-01）**：EMAIL patch 豁免 lastVerifyAt 前置+熔断态显式重启用清零（IM 分支不变），引擎投递成功置 last_verify_at——EMAIL verify 10604 与 patch 10610 的死锁解除，纯 API 外发闭环恢复。出厂 druid `filters: stat,slf4j`（D-3，wall 不兼容 PG SKIP LOCKED 拦死引擎）与 redisson-spring-boot-starter 排除（D-4） | justin | 验收回归修复轮 |
 | V1.2.1 | 2026-09-17 | 变更 | V1.2 第二特性：订阅免打扰时段 quiet_hours（编码第 20 步，§5.8 详述）。SUB-002 items[] 每行可选 `quiet_hours{start,end}`（HH:mm、start≠end、成对出现才算启用，违者 10100；缺省/`{}`=未启用，全量替换语义下缺省即重置未启用，DB 列已存在零迁移）；SUB-001 items[] 启用行原样回显（未启用行不返回该字段，缺省口径向后兼容）。语义=Courier quiet hours 口径「**推迟发送非丢弃**」：订阅矩阵展开时静默窗内外发投递 `next_retry_at` 置窗结束时刻（跨午夜两段判定：窗前段→当日 end、窗后段→次日 end），窗结束由引擎按 `next_retry_at<=now` 自动发出；URGENT（全量渠道路径不经订阅矩阵）与 INAPP（落库即达不走投递）天然豁免并有 IT 验证；模板参数名文档化 \w 限制 | justin | V1.2 编码第 20 步 |
 | V1.2.0 | 2026-09-17 | 变更 | V1.2 第一特性：消息撤回 API-MSG-009 由演进预留转正式契约（§5.5.2 详述+§4.2 清单 #51；§7 演进预留同步移除）。语义：属主校验 10400 防探测（跨租户/不存在/非数字 id 同码同文案）/SENT→CANCELLED 状态机（已撤幂等成功）/级联拦截 PENDING 投递（CAS 前置防引擎竞态，已 SENDING/SUCCESS 不追回）/用户侧列表·详情·未读数不可见/biz_no 幂等记录不动且 send-results 保持返回 | justin | V1.2 编码第 19 步 |
@@ -217,6 +218,7 @@ erDiagram
 | 21 | API-JOB-001 | /nfy/api/v1/runtime/jobs/{job_id} | GET | 异步 Job 轮询（V1.1 随 MSG-002） | T | F-MSG-001 |
 | 22 | API-DICT-001 | /nfy/api/v1/runtime/dictionaries | GET | 字典下发（等级/渠道类型/状态，前端禁硬编码） | T | PRD §4.3 |
 | 51 | API-MSG-009 | /nfy/api/v1/runtime/messages/{message_id}/cancel | POST | 消息撤回（V1.2） | T | F-MSG-001 |
+| 52 | API-OEM-001 | /nfy/api/v1/runtime/oem/hosts | GET | 本租户 oem.hosts 下发（postMessage origin 白名单运行时面，V1.3） | T | F-EMB-001 |
 
 > 鉴权列：`T`=TENANT token；`U`=必带 X-User-Id；`S可选`=HMAC 签名按租户开关（privileges.signature，见 §2.4）。
 
@@ -258,7 +260,7 @@ erDiagram
 | 49 | API-PTE-005 | /nfy/platform/api/v1/tenants/{tenant_open_id}/type-mandatory | POST | 设置类型强制订阅（mandatory 唯一入口） | P | F-TYP-001 |
 | 50 | API-PST-001 | /nfy/platform/api/v1/stats/overview | GET | 跨租户概览 | P | F-OPS-001 |
 
-> 共 51 项（auth 1 / open 1 / runtime 21 / admin 17 / platform 11）；其中 V1.1 标注 5 项（API-MSG-002、API-JOB-001、API-TPL-001/002/003）、V1.2 标注 1 项（API-MSG-009 消息撤回）。平台域路径参数一律 `tenant_open_id`（OpenID），内部雪花 id 不出网。
+> 共 52 项（auth 1 / open 1 / runtime 22 / admin 17 / platform 11）；其中 V1.1 标注 5 项（API-MSG-002、API-JOB-001、API-TPL-001/002/003）、V1.2 标注 1 项（API-MSG-009 消息撤回）、V1.3 标注 1 项（API-OEM-001 oem.hosts 下发）。平台域路径参数一律 `tenant_open_id`（OpenID），内部雪花 id 不出网。
 
 ---
 
@@ -572,6 +574,7 @@ P99 ≤ 300ms（仅落库，不发验证消息——验证是独立接口，避�
 | API-CHN-004 | `{name?, status?}` 改名/启停；DISABLED→ENABLED 须先 verify；熔断渠道启用被拒提示 | 10610 渠道已熔断 |
 | API-CHN-005 | 逻辑删除；异步从订阅剔除（回落 INAPP 规则见 PRD F-SUB-001） | 10400 |
 | API-DICT-001 | → `{levels[], channel_types[], read_status[], delivery_status[], ...}`（字典枚举全量，含文案） | - |
+| API-OEM-001 | 本租户 oem.hosts 下发（V1.3）→ `{hosts:[...]}`（postMessage origin 白名单运行时面；oem 缺省/损坏/hosts 非数组一律回 `[]` fail-closed，无专属错误码） | - |
 
 #### 5.9.2 管理面与平台域简表
 
@@ -659,7 +662,7 @@ P99 ≤ 300ms（仅落库，不发验证消息——验证是独立接口，避�
 
 ---
 
-## 附录 A：实现状态矩阵（V1.2.2 校准，含 V1.2 API-MSG-009）——✅ 51/51 全契约实现
+## 附录 A：实现状态矩阵（V1.3 校准，含 V1.2 API-MSG-009 / V1.3 API-OEM-001）——✅ 52/52 全契约实现
 
 > 对照 §4 接口清单逐项盘点；✅=已实现并有 IT 覆盖；🔜=V1.1 契约预留；⬜=V1.0 范围待实现。
 
@@ -667,10 +670,10 @@ P99 ≤ 300ms（仅落库，不发验证消息——验证是独立接口，避�
 |---|---|---|---|
 | auth | AUTH-001 换 token | - | - |
 | open | OPEN-001 注册码注册 | - | - |
-| runtime（用户面+发送面） | MSG-001/002/003/004/005/006/007/008/009、ANN-001/002/003、CHN-001~005、SUB-001/002、DICT-001、JOB-001（21 项） | - | - |
+| runtime（用户面+发送面） | MSG-001/002/003/004/005/006/007/008/009、ANN-001/002/003、CHN-001~005、SUB-001/002、DICT-001、JOB-001、OEM-001（22 项） | - | - |
 | admin（管理面） | TYP-001/002、AAN-001~005、DLV-001/002、ACH-001/002/003、SEC-001、STAT-001、TPL-001/002/003（17 项） | - | - |
 | platform（平台域） | PAN-001~004、PTE-001~005、PRK-001、PST-001（11 项） | - | - |
-| **合计** | **51/51** | **0** | **0** |
+| **合计** | **52/52** | **0** | **0** |
 
 **实现载体**：auth/开放域鉴权=framework4j-tenant（TenantAuthEndpoint）；runtime/admin/platform 控制器与外发引擎=`notification-spring-boot-starter`（`nfy.runtime.enable-api` / `nfy.runtime.engine.enabled` / `nfy.runtime.client-enabled` 三开关独立控制）；业务方门面=`NotifyClient`（local/remote 双模式）；前端消息中心=五页+铃铛（iframe postMessage 握手，投递页为 V1.2 新增）。
 

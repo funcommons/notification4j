@@ -23,8 +23,8 @@
 |---|---|---|---|
 | L-A 单元层 | starter 纯单测（Mockito/独立上下文，无容器） | **411** 用例（notification-spring-boot-starter）；另有 client-starter `NfyClientStarterUnitTest` **10** 用例（fake transport 纯单元） | `cd backend && mvn -o test -pl notification-spring-boot-starter` |
 | L-B 冒烟层 | 一条顺序链 **8** 用例跑通核心业务闭环：`NfySmokeTest`（全仓唯一 `@Tag("smoke")`，`@TestMethodOrder(OrderAnnotation)` 方法级 `@Order(1~8)`，冷启动 ≤90s） | 8/8 | `mvn -o test -pl notification4j-it -Dgroups=smoke` |
-| L-C 集成回归层 | it 模块全量：**28 个套件 / 129 用例**（Testcontainers 真库；按八业务线分组串行执行） | 129/129（L1 23 · L2 21 · L3 10 · L4 21 · L5 15 · L6 17 · L7 9 · L8 13） | `bash frontend/e2e-regression/bin/run-it-lines.sh`（逐线）或 `mvn -o test -pl notification4j-it`（全量） |
-| L-D E2E 层 | Playwright 八业务线：**8 个 spec / 70 用例**，对出厂等价实例全链路验证 | 70/70（L1 8 · L2 6 · L3 6 · L4 13 · L5 7 · L6 10 · L7 12 · L8 8） | `npx playwright test -c e2e-regression/playwright.config.ts` |
+| L-C 集成回归层 | it 模块全量：**30 个套件 / 135 用例**（Testcontainers 真库；按八业务线分组串行执行） | 135/135（L1 23 · L2 21 · L3 10 · L4 21 · L5 15 · L6 19 · L7 9 · L8 17） | `bash frontend/e2e-regression/bin/run-it-lines.sh`（逐线）或 `mvn -o test -pl notification4j-it`（全量） |
+| L-D E2E 层 | Playwright 八业务线：**8 个 spec / 72 用例**，对出厂等价实例全链路验证 | 72/72（L1 8 · L2 6 · L3 6 · L4 13 · L5 7 · L6 10 · L7 12 · L8 10） | `npx playwright test -c e2e-regression/playwright.config.ts` |
 
 冒烟链与常规 IT 纪律的刻意差异：常规 IT 用例相互独立、禁顺序依赖；冒烟链本质是「一条业务事务」（换 token → 建类型发消息 → 读 → 订阅 → 公告 → 撤回 → 投递运维 → 健康），前步产物即后步输入，定位是快速健康证明而非覆盖工具。覆盖由 L-A + L-C 负责。
 
@@ -74,7 +74,7 @@
 
 **准出（全部满足）**：
 
-1. 四层全绿：单元 411/411（另 client-starter 10/10）、冒烟 8/8、IT 129/129、E2E 70/70；
+1. 四层全绿：单元 411/411（另 client-starter 10/10）、冒烟 8/8、IT 135/135、E2E 72/72；
 2. 覆盖率双门槛通过：七包 100%（dto/entity/kms/tracelog/client/util/controller） + BUNDLE ≥96%；
 3. 无未关闭的 P0/P1/P2 缺陷；P3 允许「登记不修、附修复意见、随下版本处理」；
 4. 本轮回归报告与证据按 §5.3 规约归档（通过关键图齐备、失败有完整证据链）；

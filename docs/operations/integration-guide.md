@@ -54,9 +54,11 @@ grant_type=client_credentials&client_id={租户OpenID}&client_secret={租户密�
 - 返回 `access_token`（TENANT 型 JWT，默认 8h）——代换给 iframe 时建议**按用户签发短会话**或直接下发租户级 token（V1.0 口径：X-User-Id 透传不鉴权；推荐级加固=服务端校验 X-User-Id 与 token claim 绑定，接入方按需启用）
 - token 过期：iframe 内展示「会话已过期，请刷新」占位并**重新发起 NFY_READY 握手**，不打断父页
 
-## 四、origin 白名单（服务端/前端配置）
+## 四、origin 白名单（构建时 ∪ 运行时 oem.hosts，双面生效）
 
-前端构建注入环境变量：
+白名单 = **前端构建时注入 ∪ 租户 oem.hosts（运行时核验）**，两面任一命中即接受；两面都不命中的 `NFY_TOKEN` 消息一律忽略（防恶意父页注入，fail-closed）。
+
+**面 1：前端构建时注入**（打包进 SPA，改动需重打包）：
 
 ```
 VITE_NFY_PARENT_ORIGINS=https://app.example.com,https://admin.example.com
@@ -64,8 +66,14 @@ VITE_NFY_BASE_URL=/nfy/api/v1
 ```
 
 或页面 props：`<BellPage origins="https://app.example.com" />`。
-白名单外的 `NFY_TOKEN` 消息一律忽略（防恶意父页注入）。
-> 环境变量缺省时回退开发默认 `http://localhost:5173,http://localhost:3000`；生产必须显式注入（`frontend/src/views/nfy/BellPage.vue` / `NfyShell.vue`）。
+> 环境变量缺省时回退开发默认 `http://localhost:5173,http://localhost:3000`；生产建议显式注入（`frontend/src/views/nfy/BellPage.vue` / `NfyShell.vue`）。
+
+**面 2：租户 oem.hosts 运行时下发**（V1.3，运营时可配、无需重打前端）：
+
+1. 平台域配置：`PATCH /nfy/platform/api/v1/tenants/{open_id}`，body `{"oem":{"hosts":["https://partner.example.com"]}}`（hosts 即 postMessage 白名单，**新增 host 属安全变更须走租户审批流程**）；
+2. 握手协议自动核验：构建时名单外的父页 origin 投递 NFY_TOKEN 时，iframe 持该 token 调 `GET /nfy/api/v1/runtime/oem/hosts`（API-OEM-001，T 鉴权）拉取本租户 hosts，origin 命中才接受（同 token 在途去重；核验失败/未命中按白名单外处理）。
+
+匹配规则：origin 精确串匹配（scheme+host+port，与 `event.origin` 序列化一致，`https://a.com` ≠ `https://a.com:443` 以浏览器序列化为准）。
 
 ## 五、完整消息中心路由
 
@@ -80,7 +88,7 @@ VITE_NFY_BASE_URL=/nfy/api/v1
 
 ## 六、安全边界清单
 
-- postMessage origin 白名单（前端 `VITE_NFY_PARENT_ORIGINS` + 后端 oem.hosts）
+- postMessage origin 白名单（前端构建时 `VITE_NFY_PARENT_ORIGINS` ∪ 运行时 `oem.hosts`（API-OEM-001 经 token 核验下发）；名单外消息一律忽略 fail-closed）
 - token 内存持有（不写 URL/sessionStorage/localStorage）
 - iframe 内所有 API 请求经租户后端可观测（token 由租户后端代换签发）
 - SSRF：用户自注册 webhook 仅允许官方域名白名单（钉钉/企微/飞书）+ 443 端口 + DNS 禁内网段
