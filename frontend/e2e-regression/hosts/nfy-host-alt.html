@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>NFY e2e 宿主（备用 origin）</title>
+<style>
+  body{font:14px/1.6 system-ui;margin:0;background:#fef9ec;color:#1e293b}
+  header{padding:8px 14px;background:#fde68a;font-weight:600}
+  iframe{display:block;width:100%;height:calc(100vh - 41px);border:0;background:#fff}
+  #st{font-weight:400;font-family:Menlo,monospace;font-size:12px;margin-left:10px}
+</style>
+</head>
+<body>
+<header>宿主应用 B（origin http://localhost:13001 —— 构建时白名单外，运行时 oem.hosts 候选）<span id="st">握手未开始</span></header>
+<iframe id="nfy" src="about:blank"></iframe>
+<script>
+// 备用宿主页（origin http://localhost:13001 —— 不在前端构建时白名单 5173/3000 内）：
+// 用于 L8-09/L8-10 运行时 oem.hosts 白名单核验（V1.3，issue #1）。
+//   L8-09：租户 oem.hosts 含 13001 → 握手成功（运行时白名单补全）
+//   L8-10：租户 oem.hosts 不含 13001 → 拒绝（fail-closed）
+// 参数与 nfy-host.html 完全一致。
+const q = new URLSearchParams(location.search)
+const page = q.get('page') || 'messages'
+const st = document.getElementById('st')
+const frame = document.getElementById('nfy')
+frame.src = 'http://localhost:9200/nfy/tenant/app/' + page
+
+const token = q.get('token') || ''
+const userId = q.get('user_id') || ''
+let sent = false
+
+window.addEventListener('message', (e) => {
+  if (e.origin !== 'http://localhost:9200') return
+  if (e.data && e.data.type === 'NFY_READY') {
+    st.textContent = '收到 NFY_READY' + (sent ? '（重握手）' : '')
+    if (!sent || q.get('replay') === '1') {
+      e.source.postMessage({ type: 'NFY_TOKEN', token, user_id: userId }, 'http://localhost:9200')
+      sent = true
+    }
+  }
+})
+window.NFY_HOST_STATE = () => ({ sent, page, tokenLen: token.length, userId })
+</script>
+</body>
+</html>

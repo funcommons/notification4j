@@ -9,13 +9,9 @@ spring:
     active: dev
   lifecycle:
     timeout-per-shutdown-phase: 30s   # 优雅停机最多等 30s
-  autoconfigure:
-    exclude:
-      # D-4(P2): framework4j-redis 传递引入 redisson-spring-boot-starter, 其 RedissonAutoConfigurationV2/V4
-      # 仅 @ConditionalOnClass 无开关, 端点取 spring.data.redis 默认值(localhost:6379), 不随
-      # framework4j.redis.datasources.* 的 host/port 覆盖 → 产品全链零 redisson 使用, 显式排除防误连默认 6379
-      - org.redisson.spring.starter.RedissonAutoConfigurationV2
-      - org.redisson.spring.starter.RedissonAutoConfigurationV4
+  # V1.3（issue #3）: 原生 DataSource/Druid/MybatisPlus/TxManager + RedissonV2/V4 装配
+  # 由 starter 的 NfyDataPlaneTakeoverFilter 按闸门接管（spring.factories 注册），
+  # 壳不再需要 spring.autoconfigure.exclude 手工排除，也不需要 spring.datasource.* 喂原生装配。
   flyway:
     enabled: true
     locations: classpath:db/migration   # 脚本在 starter resources(与实体同源), app 合并 classpath 可见
@@ -31,11 +27,6 @@ spring:
   config:
     activate:
       on-profile: dev
-  datasource:
-    url: jdbc:postgresql://localhost:5432/notification4j?stringtype=unspecified
-    username: admin
-    password: test@2026
-    driver-class-name: org.postgresql.Driver
 
 framework4j:
   redis:

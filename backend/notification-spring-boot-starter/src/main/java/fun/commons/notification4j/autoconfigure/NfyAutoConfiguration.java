@@ -353,6 +353,14 @@ public class NfyAutoConfiguration {
             return new fun.commons.notification4j.service.TemplateService(objectMapper);
         }
 
+        @Bean
+        @ConditionalOnMissingBean
+        public fun.commons.notification4j.service.OemService oemService(
+                fun.commons.notification4j.mapper.NfyaTenantMapper tenantMapper,
+                com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
+            return new fun.commons.notification4j.service.OemService(tenantMapper, objectMapper);
+        }
+
         // ==== 外发引擎（编码第 6b 步）：nfy.runtime.engine.enabled 开关（SmartLifecycle 判定）====
 
         @Bean
@@ -492,6 +500,13 @@ public class NfyAutoConfiguration {
             public fun.commons.notification4j.controller.NfyRuntimeQueryController nfyRuntimeQueryController(
                     fun.commons.notification4j.service.MessageService service) {
                 return new fun.commons.notification4j.controller.NfyRuntimeQueryController(service);
+            }
+
+            @Bean
+            @ConditionalOnMissingBean
+            public fun.commons.notification4j.controller.NfyRuntimeOemController nfyRuntimeOemController(
+                    fun.commons.notification4j.service.OemService oemService) {
+                return new fun.commons.notification4j.controller.NfyRuntimeOemController(oemService);
             }
 
             @Bean

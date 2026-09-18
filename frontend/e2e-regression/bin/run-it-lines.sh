@@ -22,7 +22,7 @@ run L2 "NfyMessageFlowTest,NfyBatchSendJobTest,NfyMessageCancelTest,NfyQueryComp
 run L3 "NfyAnnouncementFlowTest,NfyAnnouncementAdminTest"
 run L4 "NfyChannelFlowTest,NfyChannelAdminTest,NfySubscriptionFlowTest"
 run L5 "NfyDeliveryEngineTest,NfyDeliveryPlanTest,NfyQuietHoursTest"
-run L6 "NfyPlatformTenantTest,NfyPlatformDomainTest,NfyTenantComplianceTest,NfySignatureKeyTest"
+run L6 "NfyPlatformTenantTest,NfyPlatformDomainTest,NfyTenantComplianceTest,NfySignatureKeyTest,NfyDataPlaneTakeoverTest"
 run L7 "NfyTemplateTest,NfyOpsHealthTest,NfySchemaMigrationTest"
 run L8 "NfyStaticPageTest,NfySmokeTest"
 echo "ALL_DONE $(date +%H:%M:%S)" >> "$SUM"

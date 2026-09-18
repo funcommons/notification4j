@@ -95,4 +95,87 @@ describe('useEmbedHandshake', () => {
     expect(machine.token.value).toBe('jwt-new')
     machine.stop()
   })
+
+  // ==== V1.3 运行时白名单（issue #1）：构建时名单外 origin 持 token 拉 oem.hosts 核验 ====
+
+  function setupWithFetcher(
+    allowed: string[],
+    fetcher: (token: string) => Promise<string[] | null>,
+  ) {
+    const postSpy = vi.fn()
+    const machine = createEmbedHandshake({
+      allowedOrigins: allowed,
+      fetchExtraOrigins: fetcher,
+      postToParent: postSpy,
+      isEmbedded: () => true,
+      resendIntervalMs: 500,
+    })
+    machine.start()
+    return { machine, postSpy }
+  }
+
+  /** 冲刷 acceptViaRuntimeList 的微任务链（不能用 runAllTimersAsync——READY 重发 interval 无限） */
+  const flushAsync = async () => {
+    for (let i = 0; i < 20; i++) await Promise.resolve()
+  }
+
+  it('运行时白名单命中：oem.hosts 含父页 origin → 接受，且同 origin 后续消息走快速路径', async () => {
+    const fetcher = vi.fn(async () => ['https://partner.example.com'])
+    const { machine } = setupWithFetcher(['https://app.example.com'], fetcher)
+    window.dispatchEvent(tokenMessage('https://partner.example.com', 'jwt-oem', 'u_9'))
+    await flushAsync()
+    expect(machine.status.value).toBe('connected')
+    expect(machine.token.value).toBe('jwt-oem')
+    expect(machine.userId.value).toBe('u_9')
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(fetcher).toHaveBeenCalledWith('jwt-oem')
+
+    // 重握手（过期后同 origin）→ runtimeOrigins 快速路径，不再触发拉取
+    machine.notifyExpired()
+    window.dispatchEvent(tokenMessage('https://partner.example.com', 'jwt-oem-2'))
+    await flushAsync()
+    expect(machine.status.value).toBe('connected')
+    expect(machine.token.value).toBe('jwt-oem-2')
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    machine.stop()
+  })
+
+  it('运行时白名单未命中：oem.hosts 不含父页 origin → 忽略，仍 waiting 重发', async () => {
+    const fetcher = vi.fn(async () => ['https://other.example.com'])
+    const { machine, postSpy } = setupWithFetcher(['https://app.example.com'], fetcher)
+    window.dispatchEvent(tokenMessage('https://evil.com'))
+    await flushAsync()
+    expect(machine.status.value).not.toBe('connected')
+    expect(machine.token.value).toBe('')
+    const readyBefore = sendReadyCalls(postSpy)
+    vi.advanceTimersByTime(1000)
+    expect(sendReadyCalls(postSpy)).toBeGreaterThan(readyBefore)
+    machine.stop()
+  })
+
+  it('运行时白名单拉取失败（null）→ fail-closed 忽略', async () => {
+    const fetcher = vi.fn(async () => null)
+    const { machine } = setupWithFetcher(['https://app.example.com'], fetcher)
+    window.dispatchEvent(tokenMessage('https://flaky.example.com'))
+    await flushAsync()
+    expect(machine.status.value).not.toBe('connected')
+    machine.stop()
+  })
+
+  it('同 token 并发消息只触发一次 oem.hosts 拉取（在途去重）', async () => {
+    let resolveFetch!: (v: string[] | null) => void
+    const fetcher = vi.fn(
+      () => new Promise<string[] | null>((resolve) => (resolveFetch = resolve)),
+    )
+    const { machine } = setupWithFetcher(['https://app.example.com'], fetcher)
+    window.dispatchEvent(tokenMessage('https://partner.example.com', 'jwt-dup'))
+    window.dispatchEvent(tokenMessage('https://partner.example.com', 'jwt-dup'))
+    window.dispatchEvent(tokenMessage('https://partner.example.com', 'jwt-dup'))
+    await Promise.resolve()
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    resolveFetch(['https://partner.example.com'])
+    await flushAsync()
+    expect(machine.status.value).toBe('connected')
+    machine.stop()
+  })
 })

@@ -6,7 +6,7 @@
     <parent>
         <groupId>fun.commons.notification4j</groupId>
         <artifactId>notification4j-parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.3.0</version>
     </parent>
 
     <!-- 编码第 30 步：业务方轻量接入（部署形态三·跨进程 remote）。零 MyBatis/数据面/控制器/引擎，

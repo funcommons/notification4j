@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url'
 /**
  * 全局前置：
  * 1. 校验被测实例（9200）已启动（未启动则提示 bin/start-app.sh）；
- * 2. 确保宿主握手页静态服务器（3000，origin 白名单内）在跑——不在则以 detached 方式拉起。
+ * 2. 确保宿主握手页静态服务器在跑——3000（构建时白名单内）与 13001（白名单外，
+ *    运行时 oem.hosts 核验用，L8-09/10）——不在则以 detached 方式拉起。
  */
 const here = dirname(fileURLToPath(import.meta.url))
 const hostDir = resolve(here, 'hosts')
@@ -25,25 +26,28 @@ async function up(url: string, timeoutMs = 5000): Promise<boolean> {
   }
 }
 
+async function ensureHostServer(port: number, probe: string): Promise<void> {
+  if (await up(`http://localhost:${port}/${probe}`)) return
+  // detached（start_new_session）：静态服务器随宿主 shell 退出不终止
+  const p = spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], {
+    cwd: hostDir,
+    stdio: 'ignore',
+    detached: true,
+  })
+  p.unref()
+  for (let i = 0; i < 20; i++) {
+    if (await up(`http://localhost:${port}/${probe}`, 1500)) return
+    await new Promise((r) => setTimeout(r, 300))
+  }
+  throw new Error(`宿主握手页静态服务器(${port})启动失败`)
+}
+
 export default async function globalSetup() {
   if (!(await up('http://localhost:9200/nfy/api/v1/ops/health'))) {
     throw new Error(`被测实例未启动（期望 http://localhost:9200）。
 先执行: bash frontend/e2e-regression/bin/start-app.sh
 实例日志: ${existsSync(appLog) ? appLog : '(不存在)'}`)
   }
-
-  if (!(await up('http://localhost:3000/nfy-host.html'))) {
-    // detached（start_new_session）：静态服务器随宿主 shell 退出不终止
-    const p = spawn('python3', ['-m', 'http.server', '3000', '--bind', '127.0.0.1'], {
-      cwd: hostDir,
-      stdio: 'ignore',
-      detached: true,
-    })
-    p.unref()
-    for (let i = 0; i < 20; i++) {
-      if (await up('http://localhost:3000/nfy-host.html', 1500)) return
-      await new Promise((r) => setTimeout(r, 300))
-    }
-    throw new Error('宿主握手页静态服务器(3000)启动失败')
-  }
+  await ensureHostServer(3000, 'nfy-host.html')
+  await ensureHostServer(13001, 'nfy-host-alt.html')
 }

@@ -16,7 +16,6 @@ export HASH_SALT=e2e-salt
 DS="jdbc:postgresql://localhost:25432/notification4j?stringtype=unspecified"
 
 ARGS=(
-  --spring.datasource.url="$DS"
   --spring.flyway.url="$DS"
   --framework4j.datasource.datasources.default.url="$DS"
   --framework4j.redis.datasources.default.port=26379

@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.AutoConfigurationImportFilter=\
+fun.commons.notification4j.autoconfigure.NfyDataPlaneTakeoverFilter

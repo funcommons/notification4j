@@ -8,6 +8,7 @@
  * authError 区分「空数据」与「会话失效」，不再呈现误导性空态。
  */
 import { provide, inject, computed, ref, watch, type Ref } from 'vue'
+import axios from 'axios'
 import { createNfyClient, NfyApiError, isAuthExpiredCode } from '@/api/nfy/client'
 import {
   createMessageApi,
@@ -52,8 +53,24 @@ export interface NfyRuntimeOptions {
  * provideNfy = createNfyRuntime + provide。
  */
 export function createNfyRuntime(options: NfyRuntimeOptions) {
+  /** 运行时白名单核验（V1.3，issue #1）：构建时名单外 origin 持候选 token 拉 oem.hosts。
+   *  契约：任何失败（网络/非 0 信封/异常）resolve null —— 握手侧 fail-closed 忽略。 */
+  const fetchExtraOrigins = async (token: string): Promise<string[] | null> => {
+    try {
+      const resp = await axios.get<{ code: number; data: { hosts?: string[] } | null }>(
+        `${options.baseUrl}/runtime/oem/hosts`,
+        { headers: { Authorization: `Bearer ${token}` }, adapter: options.adapter, timeout: 10_000 },
+      )
+      if (resp.data?.code !== 0) return null
+      return resp.data.data?.hosts ?? null
+    } catch {
+      return null
+    }
+  }
+
   const handshake = createEmbedHandshake({
     allowedOrigins: options.allowedOrigins,
+    fetchExtraOrigins,
     isEmbedded: options.isEmbedded,
   })
   handshake.start()

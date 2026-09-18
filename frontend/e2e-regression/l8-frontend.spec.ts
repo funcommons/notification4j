@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
 import {
-  BASE, platformToken, createTenant, nfy, expectCode0, get, post, uniq, evidence,
+  BASE, platformToken, createTenant, nfy, expectCode0, get, post, patch, uniq, evidence,
   type Tenant,
 } from './helpers/nfy'
 
@@ -20,6 +20,7 @@ const SHOTS = process.env.NFY_EVIDENCE_DIR
   ? path.resolve(process.env.NFY_EVIDENCE_DIR)
   : path.resolve(process.cwd(), '../docs/test/report/local-run/screenshots')
 const HOST = 'http://localhost:3000/nfy-host.html'
+const ALT_HOST = 'http://localhost:13001/nfy-host-alt.html'
 const APP = (p: string) => `http://localhost:9200/nfy/tenant/app/${p}`
 const BELL = 'http://localhost:9200/nfy/tenant/page/bell'
 const num = (v: unknown) => Number(v)
@@ -42,6 +43,12 @@ async function seedTenant(label: string): Promise<Seed> {
   const plat = await platformToken()
   const t = await createTenant(plat, uniq(label))
   return { t, uid: uniq('u') }
+}
+
+/** 平台面配置租户 oem.hosts（运行时白名单，V1.3 API-OEM-001 数据源） */
+async function setOemHosts(t: Tenant, hosts: string[]): Promise<void> {
+  expectCode0(await nfy(await patch(`${BASE}/nfy/platform/api/v1/tenants/${t.open_id}`,
+    { oem: { hosts } }, { token: await platformToken() })))
 }
 
 async function createType(t: Tenant, typeCode: string, name: string): Promise<void> {
@@ -311,9 +318,14 @@ test.describe('L8 前端消息中心线', () => {
 
   test('L8-07 origin 白名单拒绝：非白名单父页投递 NFY_TOKEN 不被接受', async () => {
     const { t, uid } = await seedTenant('白名单租户')
-    // 观察点：iframe 发出的任何 runtime API 调用都应缺位（无 token 可用）
+    // 观察点：runtime 数据面调用应缺位；/runtime/oem/hosts 核验调用 ≥1（V1.3 运行时白名单，fail-closed）
     let apiCalls = 0
-    page.on('request', (req) => { if (req.url().includes('/nfy/api/v1/runtime/')) apiCalls++ })
+    let oemProbeCalls = 0
+    page.on('request', (req) => {
+      if (!req.url().includes('/nfy/api/v1/runtime/')) return
+      if (req.url().includes('/runtime/oem/hosts')) oemProbeCalls++
+      else apiCalls++
+    })
 
     // setContent 父页 origin=about:blank（序列化为 "null"，不在白名单 3000/5173）
     await page.setContent(`<!doctype html><html><body style="background:#fef2f2">
@@ -339,15 +351,17 @@ addEventListener('message', (e) => {
       .toBe(1)
     await expect.poll(() => page.evaluate(() => (window as unknown as { __ready: number }).__ready), { timeout: 15000 })
       .toBeGreaterThanOrEqual(3)
-    // 契约：白名单外消息一律忽略 → 永远「正在连接…」，壳与数据不渲染
+    // 契约：白名单外消息先经运行时 oem.hosts 核验（本租户未配置 → []）→ 仍拒绝
     await expect(f.getByText('正在连接…')).toBeVisible()
     await expect(f.locator('aside.nfy-side')).toHaveCount(0)
-    expect(apiCalls, '无任何 runtime API 调用发出（token 未进内存）').toBe(0)
+    expect(oemProbeCalls, '运行时白名单核验调用已发出').toBeGreaterThanOrEqual(1)
+    expect(apiCalls, 'runtime 数据面零调用（token 未进内存）').toBe(0)
     await shot(page, 'L8-07-非白名单origin拒绝')
     await evidence(page, 'L8-07-白名单拒绝观察点', {
-      父页origin: 'about:blank（null origin，不在 http://localhost:5173,http://localhost:3000 白名单）',
+      父页origin: 'about:blank（null origin，不在构建时白名单 5173/3000，运行时 oem.hosts 亦不含）',
       NFY_TOKEN已投递: true, NFY_READY重发次数: '≥3（≥1s 仍 waiting）',
-      iframe运行时API调用数: apiCalls, 结论: 'token 未进内存，握手未完成，壳保持「正在连接…」',
+      oem_hosts核验调用: oemProbeCalls, runtime数据面调用数: apiCalls,
+      结论: '运行时核验未命中 fail-closed，token 未进内存，壳保持「正在连接…」',
     })
   })
 
@@ -374,6 +388,57 @@ addEventListener('message', (e) => {
     await evidence(page, 'L8-08-无效tokenAPI表现', {
       无效token响应: { http_status: api.status, code: api.code, message: api.message },
       UI表现: 'client 鉴权失败回调 → notifyExpired 回 waiting → 壳呈现「会话已失效，正在重新连接…」，无「暂无消息」空态（F-2 修复）',
+    })
+  })
+
+  test('L8-09 运行时白名单命中：oem.hosts 含父页 origin（13001）→ 握手成功（V1.3 issue #1）', async () => {
+    const { t, uid } = await seedTenant('运行时白名单租户')
+    const typeCode = uniq('T')
+    await createType(t, typeCode, '运行时白名单类型')
+    const title = uniq('运行时白名单消息')
+    await sendMessage(t, uid, typeCode, title)
+    // 平台面配置 oem.hosts 含构建时白名单外的 13001
+    await setOemHosts(t, ['http://localhost:13001'])
+
+    // 提前钉死运行时核验端点的响应形态（API-OEM-001）
+    const hostsResp = expectCode0(await nfy<{ hosts: string[] }>(await get(
+      `${BASE}/nfy/api/v1/runtime/oem/hosts`, { token: t.token })))
+    expect(hostsResp.data.hosts, 'oem.hosts 下发与平台面配置一致').toEqual(['http://localhost:13001'])
+
+    await page.goto(`${ALT_HOST}?page=messages&token=${t.token}&user_id=${uid}`)
+    const f = fl(page)
+    // 构建时白名单（5173/3000）外 origin → 走运行时核验 → 命中 → 握手成功、数据渲染
+    await expect(f.locator('.nfy-brand')).toHaveText('消息中心', { timeout: 20000 })
+    await expect(f.getByText(title)).toBeVisible()
+    await shot(page, 'L8-09-运行时白名单命中握手成功')
+    await evidence(page, 'L8-09-运行时白名单观察点', {
+      父页origin: 'http://localhost:13001（构建时白名单外）',
+      oem_hosts: hostsResp.data.hosts,
+      结论: 'iframe 持 token 核验 oem.hosts 命中 → 接受 NFY_TOKEN → 握手完成、消息渲染',
+    })
+  })
+
+  test('L8-10 运行时白名单未命中：oem.hosts 不含父页 origin（13001）→ 拒绝（fail-closed）', async () => {
+    const { t, uid } = await seedTenant('运行时白名单拒绝租户')
+    await setOemHosts(t, ['https://not-13001.example.com'])
+    let oemProbeCalls = 0
+    page.on('request', (req) => { if (req.url().includes('/runtime/oem/hosts')) oemProbeCalls++ })
+
+    await page.goto(`${ALT_HOST}?page=messages&token=${t.token}&user_id=${uid}`)
+    const f = fl(page)
+    await expect(async () => {
+      // token 已投递且核验调用已发生，但 13001 不在 oem.hosts → 仍 waiting
+      const st = await page.evaluate(() => (window as unknown as { NFY_HOST_STATE: () => Record<string, unknown> }).NFY_HOST_STATE())
+      expect(st.sent, '宿主已投递 NFY_TOKEN').toBe(true)
+      expect(oemProbeCalls, '运行时白名单核验调用已发出').toBeGreaterThanOrEqual(1)
+      await expect(f.getByText('正在连接…')).toBeVisible()
+      await expect(f.locator('aside.nfy-side')).toHaveCount(0)
+    }).toPass({ timeout: 20000 })
+    await shot(page, 'L8-10-运行时白名单未命中拒绝')
+    await evidence(page, 'L8-10-运行时白名单拒绝观察点', {
+      父页origin: 'http://localhost:13001（构建时白名单外，oem.hosts 仅含 https://not-13001.example.com）',
+      oem_hosts核验调用: oemProbeCalls,
+      结论: '运行时核验未命中 fail-closed，握手未完成，壳保持「正在连接…」',
     })
   })
 })
