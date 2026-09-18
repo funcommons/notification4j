@@ -1,0 +1,10 @@
+# JitPack 构建配置: 默认 JDK 8 跑不动 Spring Boot 3.x(--release 报错), 显式 JDK 17
+jdk:
+  - openjdk17
+before_install:
+  # 默认 Maven 过旧(maven-install-plugin 3.1.2 要求 3.6.3+), sdkman 装新版
+  - sdk install maven 3.9.9
+  - sdk use maven 3.9.9
+install:
+  # 显式 -f: pom 在 backend/ 子目录(仓根无 pom), 显式 install 会覆盖 JitPack 默认的 pom 探测
+  - mvn -f backend/pom.xml install -DskipTests

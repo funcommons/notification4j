@@ -5,7 +5,16 @@
 查看通知、自注册 IM 群 webhook 渠道、配置「消息类型 × 渠道」订阅矩阵；独立部署形态
 内置外发引擎，将站内消息投递到钉钉 / 企微 / 飞书 / 邮件。
 
-> 基于 framework4j v1.5.1 构建 · JDK 17 · Spring Boot 3.2.7 · PostgreSQL 16 · Redis 7 · License: MIT
+> 基于 framework4j v1.5.1 构建 · JDK 17 · Spring Boot 3.2.7 · PostgreSQL 16 · Redis 7
+
+[![Release](https://img.shields.io/github/v/tag/funcommons/notification4j?label=release&sort=semver)](https://github.com/funcommons/notification4j/releases)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-17-blue.svg)](backend/pom.xml)
+[![docs](https://img.shields.io/badge/docs-在线文档-blue?logo=github)](docs/README.md)
+
+> **在线阅读文档**：全部文档随仓库发布，GitHub 直接渲染——入口 [docs/README.md](docs/README.md)
+> （需求 PRD / 概要设计 / 接口契约 / 部署手册 / 用户手册 / 测试计划与报告 / ADR / 发布说明）。
+> Maven 依赖可通过 JitPack 按 tag 引入：`com.github.funcommons.notification4j:notification4j-starter:v1.2.2`。
 
 ## 特性
 
