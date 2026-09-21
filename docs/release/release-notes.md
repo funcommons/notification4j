@@ -1,8 +1,32 @@
 # 发布说明（Release Notes）
 
-> 汇总本项目两个正式版本的发布说明。事实源：git tag 注释（`v1.0.0` / `v1.2.2`）、
-> GitHub Releases（https://github.com/funcommons/notification4j/releases ）、接口文档 `docs/api/api-spec.md` 修订史（V1.0.0 ~ V1.2.2）。
+> 汇总本项目各正式版本的发布说明。事实源：git tag 注释（`v1.0.0` / `v1.2.2` / `v1.3.0` / `v1.4.0`）、
+> GitHub Releases（https://github.com/funcommons/notification4j/releases ）、接口文档 `docs/api/api-spec.md` 修订史（V1.0.0 ~ V1.4.0）。
 > 逐项变更明细见根 [CHANGELOG.md](../../CHANGELOG.md)。
+
+---
+
+## v1.4.0 — 平台站内信查询面（API-PPM-001/002）
+
+- **发布日期**：2026-09-21（commit 见 git tag `v1.4.0`）
+- **版本口径**：**Maven 坐标 1.4.0 与 tag 一致**（自 v1.3.0 起连续对齐）
+
+### 新增
+
+| 项 | 内容 |
+|---|---|
+| **API-PPM-001/002** | 平台站内信跨租户只读查询面（诉求方 MMagiX2 平台管理员站内信历史查询）：`GET /nfy/platform/api/v1/messages` 跨租户全量列表（`user_id`/`type_code`/`created_from`/`created_to`/`keyword` 可选筛选 + offset/limit 分页，缺省 0/20、上限 100）+ `GET /{message_id}` 详情（全字段 + 已读回执统计 `read_count`）。数据走既有 MessageService 同源查询路径做平台维度包装——只读面，不触发送链（发送仍归 MSG-001）；`user_id` 经收件人表参数化子查询（防注入）；不存在/非数字 id 统一 10400 防探测（口径同 MSG-005）；鉴权/信封/注册双通道与 PAN 完全同构（`@PlatformDomain` + `@RequiresToken(TENANT)` 合成口径） |
+
+### 变更
+
+- pom `1.3.0 → 1.4.0`
+- e2e 启动脚本 `bin/start-app.sh`：fat jar 路径硬编码改 glob 匹配（版本无关，bump 不再同步改脚本）
+
+### 验收
+
+- 四层全绿：starter 单测 **421/421**（双 JaCoCo 门槛）· IT **136/136**（30 套件，+1 平台域 PPM 用例）· vitest **386** · E2E **72/72**
+- fat jar（`notification4j-app-1.4.0.jar`）冒烟通过：单池（原生 Druid wrapper 0 / Hikari 0）；PPM 路由 10200 闸 + 已认证 list/detail 全链 code=0
+- 测试报告：`docs/test/report/2026-09-21-01/`
 
 ---
 
