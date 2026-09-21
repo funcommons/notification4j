@@ -3,9 +3,9 @@
 后端开发与测试手册（项目定位、快速开始、架构与部署形态总览见根 [README](../README.md)，全部文档见
 [docs/README.md](../docs/README.md)）。Maven 多模块（parent: `notification4j-parent`，framework4j v1.7.1）：
 
-- `notification-spring-boot-starter`（artifactId `notification4j-starter`）—— 全量业务实现：三域 API / 服务 / 外发引擎 / NotifyClient 门面 / SPA 托管（单测 411）
+- `notification-spring-boot-starter`（artifactId `notification4j-starter`）—— 全量业务实现：三域 API / 服务 / 外发引擎 / NotifyClient 门面 / SPA 托管（单测 421）
 - `notification4j-client-starter` —— 业务方轻量接入（跨进程 remote，零数据面，第 30 步）
-- `notification4j-it` —— 集成测试层（PG16+Redis7 Testcontainers，真库 Flyway 迁移；135 用例 / 30 套件）
+- `notification4j-it` —— 集成测试层（PG16+Redis7 Testcontainers，真库 Flyway 迁移；136 用例 / 30 套件）
 - `notification4j-app` —— 独立部署壳（Flyway baseline / OpenAPI）
 
 所有命令在 `backend/` 目录下执行；`-o` 离线模式（依赖已在本机 m2）。
@@ -16,7 +16,7 @@
 |---|---|---|
 | 单元层 | starter 纯单测（Mockito/独立上下文，无容器） | `mvn -o test -pl notification-spring-boot-starter` |
 | 冒烟层 | 一条顺序链 8 用例跑通核心业务闭环（`@Tag("smoke")`，冷启动 ≤90s） | `mvn -o test -pl notification4j-it -Dgroups=smoke` |
-| 集成层（回归层） | it 模块全量 = 29 个常规 IT 套件（用例相互独立）+ 1 个冒烟套件，共 30 套件 / 135 用例 | `mvn -o test -pl notification4j-it` |
+| 集成层（回归层） | it 模块全量 = 29 个常规 IT 套件（用例相互独立）+ 1 个冒烟套件，共 30 套件 / 136 用例 | `mvn -o test -pl notification4j-it` |
 | 全部连跑 | 单测 + 集成一条命令两模块（含覆盖率口径合并与 check 门槛） | `mvn -o clean test` |
 
 说明：
@@ -45,14 +45,14 @@
 ### 独立部署形态（notification4j-app fat jar）
 
 ```bash
-# 构建（repackage 后 notification4j-app-1.3.0.jar 为可执行 fat jar，原 thin jar 存为 .jar.original）
+# 构建（repackage 后 notification4j-app-1.4.0.jar 为可执行 fat jar，原 thin jar 存为 .jar.original）
 cd backend && mvn -o package -pl notification4j-app -DskipTests
 
 # 运行（前置：PG 5432 + Redis 6379；机密经环境变量注入，不入库不入 git）
 JWT_SECRET=<32B+ 随机串> \
 AES_KEY=<32B 随机串> \
 PLATFORM_CLIENT_SECRET=<平台域密钥> \
-java -jar notification4j-app/target/notification4j-app-1.3.0.jar
+java -jar notification4j-app/target/notification4j-app-1.4.0.jar
 ```
 
 - `server.port=9200`；控制台入口 `http://localhost:9200/`（消息中心 app 壳 `/nfy/tenant/app/messages`
@@ -107,7 +107,7 @@ framework4j 多数据源经 ImportBeanDefinitionRegistrar 注册 DataSource/SqlS
 <dependency>
     <groupId>fun.commons.notification4j</groupId>
     <artifactId>notification4j-starter</artifactId>
-    <version>1.3.0</version>
+    <version>1.4.0</version>
 </dependency>
 ```
 
@@ -142,7 +142,7 @@ public class HostApplication { ... }
 <dependency>
     <groupId>fun.commons.notification4j</groupId>
     <artifactId>notification4j-client-starter</artifactId>
-    <version>1.3.0</version>
+    <version>1.4.0</version>
 </dependency>
 ```
 

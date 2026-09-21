@@ -3,8 +3,30 @@
 本项目所有显著变更记录于此。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
 > 版本号口径说明：git tag / GitHub Release 的 vX.Y.Z 对齐接口文档（`docs/api/api-spec.md`）修订史；
-> Maven 坐标（`backend/pom.xml`，当前 1.3.0）与 tag 自 v1.3.0 起一致。
+> Maven 坐标（`backend/pom.xml`，当前 1.4.0）与 tag 自 v1.3.0 起一致。
+
+## [1.4.0] — 2026-09-21
+
+平台站内信查询面：API-PPM-001/002 落地平台域跨租户只读查询。Maven 坐标（1.4.0）与 tag v1.4.0 一致。
+
+### Added
+
+- **API-PPM-001/002 平台站内信查询面**：`GET /nfy/platform/api/v1/messages`（跨租户全量列表；`user_id`/`type_code`/`created_from`/`created_to`/`keyword` 可选筛选 + offset/limit 分页，沿 PAN 口径 limit≤100）+ `GET /{message_id}` 详情（全字段 + 已读回执统计 `read_count`）。数据走既有 MessageService 同源查询路径做平台维度包装（只读面，不触发送链），鉴权/信封/注册双通道与 PAN 完全同构（`@PlatformDomain` + `@RequiresToken(TENANT)` 合成口径；autoconfig `nfy.runtime.enable-api` 开关 + 组件扫描）。诉求方：MMagiX2 平台管理员站内信历史查询（nfy 白名单构建期烧入需 relay 面查询数据源）。
+
+### Changed
+
+- pom `1.3.0 → 1.4.0`：Maven 坐标与 tag v1.4.0 一致。
+- e2e 启动脚本 `frontend/e2e-regression/bin/start-app.sh`：fat jar 路径由硬编码 `notification4j-app-1.0.0.jar` 改 glob 匹配——后续版本 bump 无需再同步改脚本。
+
+### 验收数据（出厂等价实例）
+
+- 后端：starter 单元测试 **421/421**（双 JaCoCo 门槛）· 全量 IT **136/136**（30 套件，+1 平台域 PPM 用例）
+- 端到端：Playwright **72/72** · 前端 vitest **386** 全绿
+- fat jar 冒烟：`notification4j-app-1.4.0.jar` 启动单池实证（原生 Druid wrapper 0 / Hikari 0）；PPM 路由 10200 闸 + 已认证 list/detail 全链 code=0
+- 测试报告：`docs/test/report/2026-09-21-01/`（本轮发布验证报告 + 截图证据）
 
 ## [1.3.0] — 2026-09-19
 
@@ -84,6 +106,8 @@
 
 ---
 
+[1.4.0]: https://github.com/funcommons/notification4j/releases/tag/v1.4.0
+[1.3.0]: https://github.com/funcommons/notification4j/releases/tag/v1.3.0
 [1.2.2]: https://github.com/funcommons/notification4j/releases/tag/v1.2.2
 [1.0.0]: https://github.com/funcommons/notification4j/releases/tag/v1.0.0
 [Keep a Changelog]: https://keepachangelog.com/zh-CN/1.1.0/

@@ -27,6 +27,7 @@
 
 | 版本号 | 修订日期 | 修订类型 | 修订内容摘要 | 修订人 | 审核 / 批准人 |
 |---|---|---|---|---|---|
+| V1.4.0 | 2026-09-21 | 变更 | 平台站内信查询面（API-PPM-001/002，新增 #53/#54，诉求方 MMagiX2 平台管理员站内信历史查询）：`GET /nfy/platform/api/v1/messages` 跨租户全量列表（`user_id`/`type_code`/`created_from`/`created_to`/`keyword` 可选筛选 + offset/limit 分页，沿 PAN 口径 limit 缺省 20 上限 100）+ `GET /{message_id}` 详情（全字段 + 已读回执统计 `read_count`）。数据走既有 MessageService 同源查询路径做平台维度包装——只读面，不触发送链（发送仍归 MSG-001）；user_id 经收件人表参数化子查询（防注入，语义=「发给该用户的消息」）；不存在/非数字 id 统一 10400 防探测（口径同 MSG-005）。鉴权/信封/注册双通道与 PAN 完全同构：`@PlatformDomain` 域闸（租户 token tenant_id>0 → 403）+ `@RequiresToken(TENANT)` 合成口径（PLATFORM client 换取 tenant_id=0 合成 token）；autoconfig `nfy.runtime.enable-api` 开关 + 同基包组件扫描双注册。pom 坐标 1.3.0→1.4.0（与 tag 一致） | justin | 平台查询轮 |
 | V1.3.0 | 2026-09-19 | 变更 | 接入摩擦修复轮（GitHub issue #1/#2/#3）+ framework4j 升级 v1.5.1→v1.7.1。**API-OEM-001（新增，#52）**：`GET /nfy/api/v1/runtime/oem/hosts` 下发本租户 oem.hosts（T 鉴权无 U，同 DICT-001 口径）——嵌入消息中心 postMessage origin 白名单的运行时面：构建时名单（VITE_NFY_PARENT_ORIGINS）外父页 origin，iframe 持候选 token 调本端点核验，命中才接受 NFY_TOKEN（useEmbedHandshake fetchExtraOrigins，同 token 在途去重、失败 fail-closed 忽略）；修前 oem.hosts 仅有平台面写入与存储、无任何消费方，白名单实际只有前端构建时半边。**数据面接管（issue #3）**：starter 新增 NfyDataPlaneTakeoverFilter（AutoConfigurationImportFilter，spring.factories 注册，先例 lotask4j）——framework4j.datasource.enabled=true 时 veto 原生 DataSourceAutoConfiguration/DruidDataSourceAutoConfigure/MybatisPlusAutoConfiguration/DataSourceTransactionManagerAutoConfiguration（根因：framework4j registrar 字典序在原生装配之后，druid 原生 wrapper 先行索要 spring.datasource.url 启动即炸、补配则同库双池）；framework4j.redis.enabled=true 时 veto RedissonAutoConfigurationV2/V4（D-4 接管 app 壳手工 exclude）；总闸 nfy.enabled=false 全放行。app 壳删除 dev profile spring.datasource.* 冗余段（单池实证：原生 Druid wrapper 0 / Hikari 0 / framework4j @Primary 单池）。新增 NfyDataPlaneTakeoverTest（裸壳零手工 exclude 的嵌入形态验证）。**ID 生成器兜底（issue #2）**：starter 新增 NfyMybatisPlusSupportAutoConfiguration（before MybatisPlusAutoConfiguration 注册 @ConditionalOnMissingBean IdentifierGenerator→DefaultIdentifierGenerator，app 壳同款 config 收编删除）；注：MP 3.5.7 MybatisSqlSessionFactoryBuilder 自带 NetUtils 兜底 + framework4j-id mpIdGenerator 缺省启用，本 bean 为确定性装配缝（三重兜底） | justin | 接入摩擦修复轮 |
 | V1.2.2 | 2026-09-18 | 变更 | 验收回归修复轮（P0×3+P1+P2×3，台账见 docs/test/report/2026-09-18-01/统一测试报告.md §八）。**签名面出厂语义变更（D-1）**：app 出厂 `framework4j.signature.path-patterns=[]`——SPA 与 S2S 共用 `/nfy/api/v1/runtime/**` 路径，强制签名使嵌入面（浏览器端无租户 secret 可签）全拒 10101；出厂摘除强制面，`enabled:true` 与密钥解析基础设施保留，S2S 需要防重放时自行加回 pattern（示例见 app yml 注释）。**签名密钥解析修复（D-2）**：`NfyAutoConfiguration` 补 `@AutoConfigureBefore(SignatureAutoConfiguration)` 并移除 `nfyTenantSecretProvider` 的 `@ConditionalOnMissingBean`——修前 fwk4j InMemory 兜底抢先注册、本项目 Bean 让位，正确签名的调用也全拒 10200；修后真实租户签名调用端到端打通，新增 NfySignatureFaceTest 防回归（enabled+patterns 下未签名 10101 / 真实租户签名 code=0 双钉）。**渠道使能修复（ND-L5-01）**：EMAIL patch 豁免 lastVerifyAt 前置+熔断态显式重启用清零（IM 分支不变），引擎投递成功置 last_verify_at——EMAIL verify 10604 与 patch 10610 的死锁解除，纯 API 外发闭环恢复。出厂 druid `filters: stat,slf4j`（D-3，wall 不兼容 PG SKIP LOCKED 拦死引擎）与 redisson-spring-boot-starter 排除（D-4） | justin | 验收回归修复轮 |
 | V1.2.1 | 2026-09-17 | 变更 | V1.2 第二特性：订阅免打扰时段 quiet_hours（编码第 20 步，§5.8 详述）。SUB-002 items[] 每行可选 `quiet_hours{start,end}`（HH:mm、start≠end、成对出现才算启用，违者 10100；缺省/`{}`=未启用，全量替换语义下缺省即重置未启用，DB 列已存在零迁移）；SUB-001 items[] 启用行原样回显（未启用行不返回该字段，缺省口径向后兼容）。语义=Courier quiet hours 口径「**推迟发送非丢弃**」：订阅矩阵展开时静默窗内外发投递 `next_retry_at` 置窗结束时刻（跨午夜两段判定：窗前段→当日 end、窗后段→次日 end），窗结束由引擎按 `next_retry_at<=now` 自动发出；URGENT（全量渠道路径不经订阅矩阵）与 INAPP（落库即达不走投递）天然豁免并有 IT 验证；模板参数名文档化 \w 限制 | justin | V1.2 编码第 20 步 |
@@ -259,8 +260,10 @@ erDiagram
 | 48 | API-PAN-004 | /nfy/platform/api/v1/announcements/{announcement_id}/publish | POST | 平台公告发布（DRAFT→PUBLISHED） | P | F-ANN-001 |
 | 49 | API-PTE-005 | /nfy/platform/api/v1/tenants/{tenant_open_id}/type-mandatory | POST | 设置类型强制订阅（mandatory 唯一入口） | P | F-TYP-001 |
 | 50 | API-PST-001 | /nfy/platform/api/v1/stats/overview | GET | 跨租户概览 | P | F-OPS-001 |
+| 53 | API-PPM-001 | /nfy/platform/api/v1/messages | GET | 平台全量站内信列表（跨租户；user_id/type_code/created_from/created_to/keyword 筛选，V1.4） | P | F-MSG-003 |
+| 54 | API-PPM-002 | /nfy/platform/api/v1/messages/{message_id} | GET | 平台消息详情（全字段 + 已读回执统计，V1.4） | P | F-MSG-003 |
 
-> 共 52 项（auth 1 / open 1 / runtime 22 / admin 17 / platform 11）；其中 V1.1 标注 5 项（API-MSG-002、API-JOB-001、API-TPL-001/002/003）、V1.2 标注 1 项（API-MSG-009 消息撤回）、V1.3 标注 1 项（API-OEM-001 oem.hosts 下发）。平台域路径参数一律 `tenant_open_id`（OpenID），内部雪花 id 不出网。
+> 共 54 项（auth 1 / open 1 / runtime 22 / admin 17 / platform 13）；其中 V1.1 标注 5 项（API-MSG-002、API-JOB-001、API-TPL-001/002/003）、V1.2 标注 1 项（API-MSG-009 消息撤回）、V1.3 标注 1 项（API-OEM-001 oem.hosts 下发）、V1.4 标注 2 项（API-PPM-001/002 平台站内信查询）。平台域路径参数一律 `tenant_open_id`（OpenID），内部雪花 id 不出网。
 
 ---
 
@@ -603,6 +606,7 @@ P99 ≤ 300ms（仅落库，不发验证消息——验证是独立接口，避�
 | API-PRK-001 POST | `{max_uses, expire_hours, preset{privileges,config}}` → `{registration_key}`（一次性显示；码落 nfyp_registration_key 表，Redis 原子扣减） | - |
 | API-OPEN-001 | `{registration_key, name}` → `{open_id, tenant_secret}`（原子扣减次数；不返回内部 id） | 10608 注册码无效/用尽/过期 |
 | API-PAN-001/002/003/004 | 平台公告：同租户公告（AAN 同构）+ scope=PLATFORM（tenant_id=0）；**channel_ids 置空禁用**（平台域无渠道资源，站外仅走用户订阅路径）；PATCH 限草稿态；publish/offline 子资源齐备 | 同公告 |
+| API-PPM-001/002 | 平台站内信查询（跨租户只读）：GET 列表 `?user_id=&type_code=&created_from=&created_to=&keyword=&offset=&limit=`（offset/limit 缺省 0/20 上限 100）→ `{list[{message_id, tenant_id, type_code, level, title, status, receiver_count, created_at}], total}`；GET /{message_id} 详情追加 `{biz_no, content, link_url, sender, read_count}`；数据源 = nfya_message 主档（user_id 经收件人表子查询），不触发送链 | 10400 不存在/非数字 id |
 
 ---
 
@@ -662,7 +666,7 @@ P99 ≤ 300ms（仅落库，不发验证消息——验证是独立接口，避�
 
 ---
 
-## 附录 A：实现状态矩阵（V1.3 校准，含 V1.2 API-MSG-009 / V1.3 API-OEM-001）——✅ 52/52 全契约实现
+## 附录 A：实现状态矩阵（V1.4 校准，含 V1.2 API-MSG-009 / V1.3 API-OEM-001 / V1.4 API-PPM-001/002）——✅ 54/54 全契约实现
 
 > 对照 §4 接口清单逐项盘点；✅=已实现并有 IT 覆盖；🔜=V1.1 契约预留；⬜=V1.0 范围待实现。
 
@@ -672,8 +676,8 @@ P99 ≤ 300ms（仅落库，不发验证消息——验证是独立接口，避�
 | open | OPEN-001 注册码注册 | - | - |
 | runtime（用户面+发送面） | MSG-001/002/003/004/005/006/007/008/009、ANN-001/002/003、CHN-001~005、SUB-001/002、DICT-001、JOB-001、OEM-001（22 项） | - | - |
 | admin（管理面） | TYP-001/002、AAN-001~005、DLV-001/002、ACH-001/002/003、SEC-001、STAT-001、TPL-001/002/003（17 项） | - | - |
-| platform（平台域） | PAN-001~004、PTE-001~005、PRK-001、PST-001（11 项） | - | - |
-| **合计** | **52/52** | **0** | **0** |
+| platform（平台域） | PAN-001~004、PTE-001~005、PRK-001、PST-001、PPM-001/002（13 项） | - | - |
+| **合计** | **54/54** | **0** | **0** |
 
 **实现载体**：auth/开放域鉴权=framework4j-tenant（TenantAuthEndpoint）；runtime/admin/platform 控制器与外发引擎=`notification-spring-boot-starter`（`nfy.runtime.enable-api` / `nfy.runtime.engine.enabled` / `nfy.runtime.client-enabled` 三开关独立控制）；业务方门面=`NotifyClient`（local/remote 双模式）；前端消息中心=五页+铃铛（iframe postMessage 握手，投递页为 V1.2 新增）。
 

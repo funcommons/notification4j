@@ -295,6 +295,35 @@ class NfyPlatformDomainTest {
         org.assertj.core.api.Assertions.assertThat(list).contains("配额1");
     }
 
+    @Test
+    void ppm_platform_message_query_sees_cross_tenant_runtime_messages() throws Exception {
+        // 租户侧发一条定向消息（复用 PTE_T1 类型）；平台面可跨租户查询（含系统消息口径）
+        String tenant = tenantToken();
+        String sent = mvc.perform(post("/nfy/api/v1/runtime/messages")
+                        .header("Authorization", "Bearer " + tenant).header("X-User-Id", "u_plat")
+                        .contentType("application/json")
+                        .content("{\"type_code\":\"PTE_T1\",\"user_ids\":[\"u_plat\"],"
+                                + "\"title\":\"作品生成失败\",\"content\":\"作品 W1 渲染失败\",\"biz_no\":\"ppm-it-1\"}"))
+                .andReturn().getResponse().getContentAsString();
+        assertThatCode0(sent);
+        String messageId = extract(sent, "message_id");
+
+        String plat = platformToken();
+        // 列表：user_id + type_code 筛选命中
+        String list = pGet(plat, "/nfy/platform/api/v1/messages?user_id=u_plat&type_code=PTE_T1");
+        assertThatCode0(list);
+        org.assertj.core.api.Assertions.assertThat(list).contains("作品生成失败");
+        // 详情：全字段 + 已读回执统计（未读 → read_count=0）
+        String detail = pGet(plat, "/nfy/platform/api/v1/messages/" + messageId);
+        assertThatCode0(detail);
+        org.assertj.core.api.Assertions.assertThat(detail)
+                .contains("作品 W1 渲染失败").contains("\"read_count\":\"0\"");
+        // 不存在 → 10400 防探测
+        expectCode(pGet(plat, "/nfy/platform/api/v1/messages/999999"), 10400);
+        // 租户 token 打平台消息面 → DomainGuard 403
+        expectCode(pGet(tenant, "/nfy/platform/api/v1/messages"), 403);
+    }
+
     private void expectCode(String body, int code) {
         org.assertj.core.api.Assertions.assertThat(body).contains("\"code\":" + code);
     }

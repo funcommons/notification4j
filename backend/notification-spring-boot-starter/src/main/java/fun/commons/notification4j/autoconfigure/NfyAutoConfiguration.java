@@ -331,6 +331,16 @@ public class NfyAutoConfiguration {
                     messageMapper, recipientMapper, deliveryMapper, channelMapper, tenantMapper);
         }
 
+        // ==== 平台站内信查询（API-PPM：平台域只读面，跨租户）====
+
+        @Bean
+        @ConditionalOnMissingBean
+        public fun.commons.notification4j.service.PlatformMessageService platformMessageService(
+                fun.commons.notification4j.service.MessageService messageService,
+                fun.commons.notification4j.mapper.NfyaMessageRecipientMapper recipientMapper) {
+            return new fun.commons.notification4j.service.PlatformMessageService(messageService, recipientMapper);
+        }
+
         // ==== 批量发送 Job（编码第 15 步：MSG-002 + JOB-001，V1.1 提前落地）====
 
         @Bean
@@ -458,6 +468,13 @@ public class NfyAutoConfiguration {
             public fun.commons.notification4j.controller.NfyPlatformTypeController nfyPlatformTypeController(
                     fun.commons.notification4j.service.PlatformTypeService service) {
                 return new fun.commons.notification4j.controller.NfyPlatformTypeController(service);
+            }
+
+            @Bean
+            @ConditionalOnMissingBean
+            public fun.commons.notification4j.controller.NfyPlatformMessageController nfyPlatformMessageController(
+                    fun.commons.notification4j.service.PlatformMessageService service) {
+                return new fun.commons.notification4j.controller.NfyPlatformMessageController(service);
             }
 
             @Bean

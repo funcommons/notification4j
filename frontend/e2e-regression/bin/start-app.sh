@@ -5,7 +5,8 @@
 # detached：start_new_session 脱离进程组，避免命令超时连带 SIGTERM 杀掉 java
 set -e
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-JAR="$ROOT/backend/notification4j-app/target/notification4j-app-1.0.0.jar"
+# jar 名随版本变化，glob 后按版本序取最高版（防非 clean 构建残留旧版 jar 被 head -1 选中）
+JAR="$(ls "$ROOT"/backend/notification4j-app/target/notification4j-app-*.jar 2>/dev/null | sort -V | tail -1)"
 LOG="$ROOT/frontend/e2e-regression/.runs/e2e-app.log"
 
 export PLATFORM_CLIENT_SECRET=platform-secret-e2e
