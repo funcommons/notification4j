@@ -32,7 +32,10 @@ export interface OemConfig {
 
 /** 默认 OEM 配置 (前端内置, 不依赖后端) */
 export const OEM_CONFIG: OemConfig = {
-  logoUrl: '/logo.svg',
+  // logo 走构建 base 前缀拼路径 (P2-9 修复): vite base='/nfy/' 嵌入形态 → '/nfy/logo.svg'
+  // (服务端 NfyStaticPageConfig /nfy/logo.svg 转发承接); dev base='/' → '/logo.svg' 根映射。
+  // 原绝对 '/logo.svg' 在 /nfy/ base 下解析到宿主源根路径 → 404。
+  logoUrl: `${import.meta.env.BASE_URL}logo.svg`,
   companyName: '权益中台',
   title: '权益中台',
   subtitle: '公共权益配置计量中台',

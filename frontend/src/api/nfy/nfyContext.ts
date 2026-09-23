@@ -49,17 +49,20 @@ export interface NfyRuntimeOptions {
 }
 
 /**
- * 组装握手 + 客户端 + 鉴权失效接线（不依赖组件实例，可单测）。
- * provideNfy = createNfyRuntime + provide。
+ * 运行时白名单核验请求器（V1.3，issue #1）工厂：构建时名单外的父页 origin，握手侧持
+ * 候选 token 调 oem.hosts 下发端点核验，命中才接受。
+ * 契约：任何失败（网络/非 0 信封/异常）resolve null —— 握手侧 fail-closed 忽略。
+ * Shell（createNfyRuntime）与 BellPage（铃铛单页自建握手）共用同一实现。
  */
-export function createNfyRuntime(options: NfyRuntimeOptions) {
-  /** 运行时白名单核验（V1.3，issue #1）：构建时名单外 origin 持候选 token 拉 oem.hosts。
-   *  契约：任何失败（网络/非 0 信封/异常）resolve null —— 握手侧 fail-closed 忽略。 */
-  const fetchExtraOrigins = async (token: string): Promise<string[] | null> => {
+export function createFetchExtraOrigins(
+  baseUrl: string,
+  adapter?: import('axios').AxiosRequestConfig['adapter'],
+): (token: string) => Promise<string[] | null> {
+  return async (token: string): Promise<string[] | null> => {
     try {
       const resp = await axios.get<{ code: number; data: { hosts?: string[] } | null }>(
-        `${options.baseUrl}/runtime/oem/hosts`,
-        { headers: { Authorization: `Bearer ${token}` }, adapter: options.adapter, timeout: 10_000 },
+        `${baseUrl}/runtime/oem/hosts`,
+        { headers: { Authorization: `Bearer ${token}` }, adapter, timeout: 10_000 },
       )
       if (resp.data?.code !== 0) return null
       return resp.data.data?.hosts ?? null
@@ -67,10 +70,16 @@ export function createNfyRuntime(options: NfyRuntimeOptions) {
       return null
     }
   }
+}
 
+/**
+ * 组装握手 + 客户端 + 鉴权失效接线（不依赖组件实例，可单测）。
+ * provideNfy = createNfyRuntime + provide。
+ */
+export function createNfyRuntime(options: NfyRuntimeOptions) {
   const handshake = createEmbedHandshake({
     allowedOrigins: options.allowedOrigins,
-    fetchExtraOrigins,
+    fetchExtraOrigins: createFetchExtraOrigins(options.baseUrl, options.adapter),
     isEmbedded: options.isEmbedded,
   })
   handshake.start()

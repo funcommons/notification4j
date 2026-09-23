@@ -6,21 +6,31 @@ import { ref, onMounted } from 'vue'
 import { createNfyClient } from '@/api/nfy/client'
 import { createMessageApi, type MessageItem } from '@/api/nfy'
 import { createEmbedHandshake } from '@/composables/nfy/useEmbedHandshake'
+import { createFetchExtraOrigins } from '@/api/nfy/nfyContext'
 import { useUnreadCount } from '@/composables/nfy/useUnreadCount'
 import { parseFwkTime } from '@/utils/fwkTime'
 
 const props = defineProps<{ baseUrl?: string; origins?: string; jumpUrl?: string }>()
 
+// 基址与构建时兜底名单：env 只是兜底合并项（部署方可烧入已知宿主），缺省回落本地开发对
+const nfyBaseUrl = props.baseUrl ?? import.meta.env.VITE_NFY_BASE_URL ?? '/nfy/api/v1'
+const allowedOrigins = (props.origins ?? import.meta.env.VITE_NFY_PARENT_ORIGINS ?? 'http://localhost:5173,http://localhost:3000')
+  .split(',')
+  .map((s: string) => s.trim())
+
+// 运行时白名单补全（V1.3，issue #1；P1-1 修复）：构建时名单外的父页 origin 持候选 token
+// 调 /runtime/oem/hosts 核验，命中才接受 —— 构建期 env 不再是白名单唯一来源（任何不带
+// VITE_NFY_PARENT_ORIGINS 的重打包不再拒绝宿主）。契约同 Shell 侧：失败 resolve null，
+// 握手一律忽略（fail-closed，防恶意父页注入）。
 const handshake = createEmbedHandshake({
-  allowedOrigins: (props.origins ?? import.meta.env.VITE_NFY_PARENT_ORIGINS ?? 'http://localhost:5173,http://localhost:3000')
-    .split(',')
-    .map((s: string) => s.trim()),
+  allowedOrigins,
+  fetchExtraOrigins: createFetchExtraOrigins(nfyBaseUrl),
 })
 handshake.start()
 
 const apis = createMessageApi(
   createNfyClient({
-    baseUrl: props.baseUrl ?? import.meta.env.VITE_NFY_BASE_URL ?? '/nfy/api/v1',
+    baseUrl: nfyBaseUrl,
     getToken: () => handshake.token.value,
     getUserId: () => handshake.userId.value,
     // F-2：鉴权失败（401/信封 102xx）→ 重新握手，宿主重新发 token 后自愈

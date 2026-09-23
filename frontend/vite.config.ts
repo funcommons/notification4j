@@ -6,7 +6,11 @@ import pkg from './package.json'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/',
+  // 部署 base = /nfy/：应用路由空间本就是 /nfy/tenant/**（router/index.ts），宿主域同源反代
+  // （mmagix /nfy 段 / nginx /nfy/ → 本服务）路径原样透传不 rewrite——产物资产引用必须带
+  // /nfy 前缀，否则嵌入宿主域时 index.html 的绝对 /assets/* 解析到宿主源 404（iframe 白屏）。
+  // 服务端承接见 NfyStaticPageConfig（/nfy/assets/** 等映射与 /assets/** 双轨并存）。
+  base: '/nfy/',
   plugins: [
     vue({
       template: {

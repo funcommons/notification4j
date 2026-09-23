@@ -67,6 +67,16 @@ public class NfyStaticPageConfig implements WebMvcConfigurer {
                 .addResourceLocations(CONSOLE_LOCATION + "images/");
         registry.addResourceHandler("/oem/**")
                 .addResourceLocations(CONSOLE_LOCATION + "oem/");
+        // /nfy/** 双轨（vite base='/nfy/' 产物，issue：宿主域同源反代嵌入）：
+        // 宿主域 nginx / mmagix dev 代理 /nfy 段路径原样透传（不 rewrite），产物资产引用为
+        // /nfy/assets/* 等 base 前缀路径——本服务必须按同前缀承接，否则嵌入宿主域时全量 404
+        //（iframe 白屏）。与根前缀映射双轨并存，独立部署（:9200 根路径）旧引用不受影响。
+        registry.addResourceHandler("/nfy/assets/**")
+                .addResourceLocations(CONSOLE_LOCATION + "assets/", CONSOLE_LOCATION);
+        registry.addResourceHandler("/nfy/images/**")
+                .addResourceLocations(CONSOLE_LOCATION + "images/");
+        registry.addResourceHandler("/nfy/oem/**")
+                .addResourceLocations(CONSOLE_LOCATION + "oem/");
     }
 
     @Bean
@@ -98,6 +108,18 @@ public class NfyStaticPageConfig implements WebMvcConfigurer {
         @GetMapping("/logo.svg")
         public String logo() {
             return "forward:/assets/logo.svg";
+        }
+
+        // /nfy 前缀双轨（vite base='/nfy/' 产物根引用，见 addResourceHandlers 注）：转发到
+        // /nfy/assets/** 资源链（wildcard 资源映射），exact @GetMapping 恒可匹配
+        @GetMapping("/nfy/favicon.svg")
+        public String nfyFavicon() {
+            return "forward:/nfy/assets/favicon.svg";
+        }
+
+        @GetMapping("/nfy/logo.svg")
+        public String nfyLogo() {
+            return "forward:/nfy/assets/logo.svg";
         }
     }
 }
