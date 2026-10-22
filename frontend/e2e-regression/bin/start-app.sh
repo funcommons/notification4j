@@ -40,3 +40,19 @@ with open(log, 'w') as f:
 print("APP_PID=" + str(p.pid))
 open('/tmp/nfy4j-e2e-app.pid', 'w').write(str(p.pid))
 PYEOF
+
+# 日志看门狗：stdout 重定向文件无滚动上限，引擎日志(500ms 扫描)曾撑到 11G。
+# 超 200MB 即截断——java 持有的 fd 偏移不变，文件长度虚高但变稀疏，实际磁盘占用不涨
+WATCHDOG_PIDFILE="/tmp/nfy4j-e2e-log-watchdog.pid"
+[ -f "$WATCHDOG_PIDFILE" ] && kill "$(cat "$WATCHDOG_PIDFILE" 2>/dev/null)" 2>/dev/null || true
+(
+  APP_PID="$(cat /tmp/nfy4j-e2e-app.pid 2>/dev/null)"
+  while [ -n "$APP_PID" ] && ps -p "$APP_PID" >/dev/null 2>&1; do
+    sleep 60
+    [ -f "$LOG" ] || continue
+    if [ "$(stat -f%z "$LOG" 2>/dev/null || echo 0)" -gt 209715200 ]; then
+      : > "$LOG"
+    fi
+  done
+) >/dev/null 2>&1 &
+echo $! > "$WATCHDOG_PIDFILE"
