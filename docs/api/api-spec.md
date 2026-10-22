@@ -27,6 +27,7 @@
 
 | 版本号 | 修订日期 | 修订类型 | 修订内容摘要 | 修订人 | 审核 / 批准人 |
 |---|---|---|---|---|---|
+| V1.4.1 | 2026-09-29 | 勘误 | 接入方使用手册（docs/manual/，24 篇）编写过程中逐条对源码核验发现的文档失真集中勘误（不改任何行为契约，全部以源码/IT 实测为准）：①型别隔离真实行为——跨域 403（DomainGuard）/型别不匹配 10300（fwk4j v1.7.1 实测），10207 实为令牌格式/元数据解析错误（§2.4 铁律、§6.1、§6.4）；②签名错误族无 SIGNATURE_* 子类型，实为 10101/10102/10302/10200 且 HTTP 401 直写，签名侧轮换无宽限（§2.4 表头行）；③限流维度勘误——出厂 `default-scope: APP` 大写未命中 fwk4j 小写分支，实际按客户端 IP×路径 100 次/1m，原租户级/用户级 QPS 分层从未实装，XFF 信任需反代清洗（§2.6 整表替换）；④MSG-001 空 user_ids 实测 10100 非 10101（§5.2）；⑤reset-secret 不撤销存量会话（§5.9.2）；⑥注册码扣减为 DB 单语句 CAS 非 Redis（§5.9.2）；⑦PTE-002 oem.hosts 无 CSP frame-ancestors 实现、theme/title/logo 仅存储（§5.9.2）。另：未读数 Redis 缓存延后已于 V1.0.6 登记，维持 | justin | 使用手册编写轮（源码核验） |
 | V1.4.0 | 2026-09-21 | 变更 | 平台站内信查询面（API-PPM-001/002，新增 #53/#54，诉求方 MMagiX2 平台管理员站内信历史查询）：`GET /nfy/platform/api/v1/messages` 跨租户全量列表（`user_id`/`type_code`/`created_from`/`created_to`/`keyword` 可选筛选 + offset/limit 分页，沿 PAN 口径 limit 缺省 20 上限 100）+ `GET /{message_id}` 详情（全字段 + 已读回执统计 `read_count`）。数据走既有 MessageService 同源查询路径做平台维度包装——只读面，不触发送链（发送仍归 MSG-001）；user_id 经收件人表参数化子查询（防注入，语义=「发给该用户的消息」）；不存在/非数字 id 统一 10400 防探测（口径同 MSG-005）。鉴权/信封/注册双通道与 PAN 完全同构：`@PlatformDomain` 域闸（租户 token tenant_id>0 → 403）+ `@RequiresToken(TENANT)` 合成口径（PLATFORM client 换取 tenant_id=0 合成 token）；autoconfig `nfy.runtime.enable-api` 开关 + 同基包组件扫描双注册。pom 坐标 1.3.0→1.4.0（与 tag 一致） | justin | 平台查询轮 |
 | V1.3.0 | 2026-09-19 | 变更 | 接入摩擦修复轮（GitHub issue #1/#2/#3）+ framework4j 升级 v1.5.1→v1.7.1。**API-OEM-001（新增，#52）**：`GET /nfy/api/v1/runtime/oem/hosts` 下发本租户 oem.hosts（T 鉴权无 U，同 DICT-001 口径）——嵌入消息中心 postMessage origin 白名单的运行时面：构建时名单（VITE_NFY_PARENT_ORIGINS）外父页 origin，iframe 持候选 token 调本端点核验，命中才接受 NFY_TOKEN（useEmbedHandshake fetchExtraOrigins，同 token 在途去重、失败 fail-closed 忽略）；修前 oem.hosts 仅有平台面写入与存储、无任何消费方，白名单实际只有前端构建时半边。**数据面接管（issue #3）**：starter 新增 NfyDataPlaneTakeoverFilter（AutoConfigurationImportFilter，spring.factories 注册，先例 lotask4j）——framework4j.datasource.enabled=true 时 veto 原生 DataSourceAutoConfiguration/DruidDataSourceAutoConfigure/MybatisPlusAutoConfiguration/DataSourceTransactionManagerAutoConfiguration（根因：framework4j registrar 字典序在原生装配之后，druid 原生 wrapper 先行索要 spring.datasource.url 启动即炸、补配则同库双池）；framework4j.redis.enabled=true 时 veto RedissonAutoConfigurationV2/V4（D-4 接管 app 壳手工 exclude）；总闸 nfy.enabled=false 全放行。app 壳删除 dev profile spring.datasource.* 冗余段（单池实证：原生 Druid wrapper 0 / Hikari 0 / framework4j @Primary 单池）。新增 NfyDataPlaneTakeoverTest（裸壳零手工 exclude 的嵌入形态验证）。**ID 生成器兜底（issue #2）**：starter 新增 NfyMybatisPlusSupportAutoConfiguration（before MybatisPlusAutoConfiguration 注册 @ConditionalOnMissingBean IdentifierGenerator→DefaultIdentifierGenerator，app 壳同款 config 收编删除）；注：MP 3.5.7 MybatisSqlSessionFactoryBuilder 自带 NetUtils 兜底 + framework4j-id mpIdGenerator 缺省启用，本 bean 为确定性装配缝（三重兜底） | justin | 接入摩擦修复轮 |
 | V1.2.2 | 2026-09-18 | 变更 | 验收回归修复轮（P0×3+P1+P2×3，台账见 docs/test/report/2026-09-18-01/统一测试报告.md §八）。**签名面出厂语义变更（D-1）**：app 出厂 `framework4j.signature.path-patterns=[]`——SPA 与 S2S 共用 `/nfy/api/v1/runtime/**` 路径，强制签名使嵌入面（浏览器端无租户 secret 可签）全拒 10101；出厂摘除强制面，`enabled:true` 与密钥解析基础设施保留，S2S 需要防重放时自行加回 pattern（示例见 app yml 注释）。**签名密钥解析修复（D-2）**：`NfyAutoConfiguration` 补 `@AutoConfigureBefore(SignatureAutoConfiguration)` 并移除 `nfyTenantSecretProvider` 的 `@ConditionalOnMissingBean`——修前 fwk4j InMemory 兜底抢先注册、本项目 Bean 让位，正确签名的调用也全拒 10200；修后真实租户签名调用端到端打通，新增 NfySignatureFaceTest 防回归（enabled+patterns 下未签名 10101 / 真实租户签名 code=0 双钉）。**渠道使能修复（ND-L5-01）**：EMAIL patch 豁免 lastVerifyAt 前置+熔断态显式重启用清零（IM 分支不变），引擎投递成功置 last_verify_at——EMAIL verify 10604 与 patch 10610 的死锁解除，纯 API 外发闭环恢复。出厂 druid `filters: stat,slf4j`（D-3，wall 不兼容 PG SKIP LOCKED 拦死引擎）与 redisson-spring-boot-starter 排除（D-4） | justin | 验收回归修复轮 |
@@ -70,7 +71,7 @@
 | 租户域-运行面 | `/nfy/api/v1/runtime/*` | **TENANT** 型 JWT（发送面可叠加 HMAC 签名） | 发消息、用户消息中心、用户渠道、订阅偏好 |
 | 开放域 | `/nfy/open/api/v1/*` | 无（IP 限流 + 审计） | 凭注册码自助注册（唯一写操作） |
 
-**铁律**：token 型别硬隔离——PLATFORM token 打租户域 / TENANT token 打平台域 → `10207 令牌类型不匹配`；runtime 面用户数据必须带 `X-User-Id`（§2.4）。
+**铁律**：token 型别硬隔离——TENANT token 打平台域 → HTTP 403 + 信封 code=403（DomainGuard，NfyAuthFlowTest 钉死）；token 型别与 `@RequiresToken` 不匹配 → `10300 令牌类型不匹配`（fwk4j v1.7.1 实测，见 §6.1 勘误注）；runtime 面用户数据必须带 `X-User-Id`（§2.4）。
 
 **HTTP 语义闭环**：102xx/103xx 认证授权失败一律 **HTTP 200 + 信封 code**（token 缺失/过期/无效由 fwk4j 拦截器在应用层发信封）；**例外**：DomainGuard 型别隔离（`@TenantDomain`/`@PlatformDomain`，ADR-0007）返回 **HTTP 403 + 框架信封 code=403**（编码第 2 步 IT 实测钉死）；其余 401/403 留给网关/路由层，见 §6.1。
 
@@ -103,7 +104,7 @@ grant_type=client_credentials&client_id={租户OpenID}&client_secret={租户密�
 | X-User-Id | 请求 | runtime 用户面必填 | 终端用户标识，字符串 ≤64，**透传不鉴权**（《租户设计》§5.4） |
 | Idempotency-Key | 请求 | 创建类写操作必填 | UUID v4，服务端保留 48h；同 key 同 body 返回首次结果，同 key 不同 body → `10501`。**豁免清单**：纯状态标记类写操作天然幂等、免 Header——MSG-006 read、ANN-002 read、ANN-003 confirm、CHN-004 启停（各详述已标注）；CHN-003 verify（重发验证消息无副作用差异） |
 | X-Trace-Id | 请求+响应 | 否（响应必返） | 不传则服务端生成；body `trace_id` 双通道 |
-| X-Access-Key / X-Timestamp / X-Nonce / X-Signature | 请求 | 签名开启的租户必填 | HMAC-SHA256 签名防重放（fwk4j-signature）。**按租户开关**（`privileges.signature`，ADR-0008）：未开启=不校验；开启后密钥未注册=全拒（安全默认）、已注册=强制校验；四态错误码 `10302`+error 子类型（SIGNATURE_MISSING/EXPIRED/REPLAYED/INVALID）；密钥注册/轮换走 API-SEC-001。**出厂默认口径（V1.2.2/D-1）**：app 出厂 `framework4j.signature.path-patterns=[]`（SPA 与 S2S 共用 `/nfy/api/v1/runtime/**` 路径，嵌入面无租户 secret 可签）——即出厂**不强制**任何路径签名；`enabled:true` 与密钥解析基础设施保留（NfyTenantSecretProvider + NfySignatureFaceTest 防回归），S2S 需要防重放时自行加回 pattern（示例见 app yml 注释） |
+| X-Access-Key / X-Timestamp / X-Nonce / X-Signature | 请求 | 签名开启的租户必填 | HMAC-SHA256 签名防重放（fwk4j-signature）。**按租户开关**（`privileges.signature`，ADR-0008）：未开启=不校验；开启后密钥未注册=全拒（安全默认）、已注册=强制校验；错误族（fwk4j v1.7.1 实测，HTTP 401+信封直写）：缺四头之一 `10101` / 时间窗非法 `10102` / 重放或签名不匹配 `10302` / 未知 AccessKey `10200`；密钥注册/轮换走 API-SEC-001（签名侧轮换无宽限，宽限仅在认证换 token 侧）。**出厂默认口径（V1.2.2/D-1）**：app 出厂 `framework4j.signature.path-patterns=[]`（SPA 与 S2S 共用 `/nfy/api/v1/runtime/**` 路径，嵌入面无租户 secret 可签）——即出厂**不强制**任何路径签名；`enabled:true` 与密钥解析基础设施保留（NfyTenantSecretProvider + NfySignatureFaceTest 防回归），S2S 需要防重放时自行加回 pattern（示例见 app yml 注释） |
 | Retry-After | 响应 | 限流时必返 | 重试等待秒数 |
 
 ### 2.5 响应信封（6 字段，业务异常统一 HTTP 200）
@@ -126,10 +127,9 @@ grant_type=client_credentials&client_id={租户OpenID}&client_secret={租户密�
 
 | 维度 | 默认阈值（可配） | 响应 |
 |---|---|---|
-| 租户级 · runtime 发送 | 100 QPS / 租户 | `10500` + `Retry-After` |
-| 租户级 · 其余 runtime/admin | 300 QPS / 租户 | 同上 |
-| 用户级 · 消息中心读接口 | 60 QPS / (租户+用户) | 同上 |
-| IP 级 · 开放域注册 | 10 次/小时 / IP | 同上 |
+| 客户端 IP × 路径（实装口径，V1.4.1 勘误） | `default-limit: 100` 次/`1m`（Lua 滑窗；覆盖 `/nfy/api/v1/runtime/**`、`/nfy/api/v1/assets/**`、`/nfy/api/v1/platform/assets/**`、`/nfy/open/**`，换 token 端点白名单豁免） | `10500` + `Retry-After` |
+
+> **勘误注（V1.4.1，以 app yml + fwk4j v1.7.1 源码为准）**：出厂 `default-scope: APP`（大写）未命中 fwk4j `RateLimitKeyResolver` 的小写 scope 分支，实际按**客户端 IP × 路径**维度限流（key `notification4j:rl:APP:{ip}:{path}`，NAT 出口共桶）；yml 行内注释「按 Tenant 维度」为陈旧口径。原「租户级 100/300 QPS、用户级 60 QPS」分层从未实装。反代必须清洗客户端自带 `X-Forwarded-For`（resolver 信任首值，可伪造换桶）。
 | 换 token | 无独立限流（**评审修订**：框架白名单豁免；仅防爆破锁 5 次锁 15min 兜底，成功调用量无上限——后续需要时自建 per-client_id 计数） | `429` 信封（锁定） |
 
 > **出厂配置口径（以 app yml 为准）**：`default-limit: 100` + `default-window: 1m`（即 **100 次/分钟**，Lua 滑窗）+ `default-scope: APP`（按 tenant_id），path-patterns 覆盖 `/nfy/api/v1/runtime/**`、assets 与 `/nfy/open/**`；`/nfy/api/v1/auth/token` 白名单豁免。上表 300/60/10 等分档为设计目标阈值，出厂未单列（admin 面不在 path-patterns 内），按需配置。
@@ -331,7 +331,7 @@ erDiagram
 
 | code | 场景 | message |
 |---|---|---|
-| 10101 | user_ids 为空 | "接收人列表不能为空" |
+| 10100 | user_ids 为空（@Valid @NotEmpty 先拦；V1.4.1 勘误：IT NfyBatchSendJobTest 实测 10100，service 层 10101 仅防御性兜底） | "接收人列表不能为空" |
 | 10601 | type_code 不存在/停用 | "消息类型不存在或已停用" |
 | 10102 | user_ids >1000（零 DB 判定的参数校验，归 101xx） | "接收人数量超限(单次≤1000)" |
 | 10603 | 模板参数缺失（V1.1） | "模板参数缺失:{name}" |
@@ -587,7 +587,7 @@ P99 ≤ 300ms（仅落库，不发验证消息——验证是独立接口，避�
 | API-TYP-002 PATCH | 可改 name/description/default_*/status；DISABLED 后发送拒收（10601）；内置类型不可停用 | 10402 内置类型不可停用 |
 | API-AAN-001 POST | `{title, content, level, effective_at, expire_at, need_confirm, link_url, channel_ids[], biz_no}` → `{announcement_id, status:"DRAFT"}`；同租户同时生效公告 ≤20 条 | 10102 生效窗口非法 / 10611 生效公告超限 |
 | API-AAN-002 | `{}` GET 详情（全字段）→ 草稿/PUBLISHED 主档；PATCH 限 DRAFT 态（title/content/level/时间窗/need_confirm/link_url/channel_ids） | 10402 非 DRAFT 态不可修改 |
-| API-PTE-002 | GET → `{open_id, name, email(脱敏), status, privileges, config, oem, created_at}`；PATCH body 三组：`privileges{"signature":bool,"delivery":{"email":bool,...}}`（安全开关，变更即时生效并审计）、`config{"retentionDays":int,"alert_user_ids":[],"mail":{...}}`（参数，mail.password AES-GCM）、`oem{"theme","title","logo","hosts":[]}`（hosts 即 frame-ancestors/postMessage 白名单，**新增 host 触发嵌入安全边界变更，须二次确认**） | 10102 参数非法 |
+| API-PTE-002 | GET → `{open_id, name, email(脱敏), status, privileges, config, oem, created_at}`；PATCH body 三组：`privileges{"signature":bool,"delivery":{"email":bool,...}}`（安全开关，变更即时生效并审计）、`config{"retentionDays":int,"alert_user_ids":[],"mail":{...}}`（参数，mail.password AES-GCM）、`oem{"theme","title","logo","hosts":[]}`（hosts 为 postMessage 运行时 origin 白名单，消费方 API-OEM-001；**V1.4.1 勘误**：后端无 CSP frame-ancestors 实现，该面由嵌入宿主/网关自理；theme/title/logo 仅存储不消费；**新增 host 触发嵌入安全边界变更，须二次确认**） | 10102 参数非法 |
 | API-PST-001 | → `{tenant_count, active_tenants, today_messages, today_deliveries, deliver_success_rate, dead_count, dead_tenants[]≤20}` | - |
 | API-PRK-001 POST 补充 | body 另可传 `preset`（预绑配置档）——L1/L2/L3 信任分级是**发码前的运营决策**（《租户设计》§6.2：L1 不发码直发平台密钥、L2 注册码、L3 走通道 A），不需契约字段，分级语义由 preset 档位承载 | - |
 | API-AAN-003 publish | 草稿→发布；生成外发任务=勾选公共渠道+订阅 ANNOUNCEMENT 站外渠道的用户渠道 | 10402 非草稿态 |
@@ -600,10 +600,10 @@ P99 ≤ 300ms（仅落库，不发验证消息——验证是独立接口，避�
 | API-STAT-001 | → `{today_sent, today_delivered, deliver_success_rate, read_rate_7d, channel_count}` | - |
 | API-SEC-001 | GET 查询签名密钥状态（脱敏）/POST 注册或轮换 `{secret}`；开启签名（privileges.signature=true）后未注册=runtime 写面全拒 | - |
 | API-PTE-001 POST | `{name, email, privileges{}, config{}, oem{}}` → `{open_id, tenant_secret}`（明文仅此一次；**不返回内部 id**） | 10401 邮箱重复 |
-| API-PTE-003 reset-secret | → `{tenant_secret}`（新明文一次）；旧密钥进 prev 宽限 24h；撤销全部存量会话 | - |
+| API-PTE-003 reset-secret | → `{tenant_secret}`（新明文一次）；旧密钥进 prev 宽限 24h（**V1.4.1 勘误**：reset 不撤销存量会话——踢会话走 SUSPEND/CLOSE 的 TenantSessionRevoker） | - |
 | API-PTE-004 status | `{action:"SUSPEND"/"RESUME"/"CLOSE"}`；CLOSE 需冷静期且无未投递任务 | 10402 状态机非法迁移 |
 | API-PTE-005 | `{type_code, mandatory:0/1}` → 设置该租户类型的强制订阅标记（mandatory 唯一设置入口） | 10400 类型不存在 |
-| API-PRK-001 POST | `{max_uses, expire_hours, preset{privileges,config}}` → `{registration_key}`（一次性显示；码落 nfyp_registration_key 表，Redis 原子扣减） | - |
+| API-PRK-001 POST | `{max_uses, expire_hours, preset{privileges,config}}` → `{registration_key}`（一次性显示；码落 nfyp_registration_key 表；**V1.4.1 勘误**：扣减实为 DB 单语句 CAS（`used_count<max_uses AND ACTIVE AND 未过期`），Redis 为登记优化项未实装） | - |
 | API-OPEN-001 | `{registration_key, name}` → `{open_id, tenant_secret}`（原子扣减次数；不返回内部 id） | 10608 注册码无效/用尽/过期 |
 | API-PAN-001/002/003/004 | 平台公告：同租户公告（AAN 同构）+ scope=PLATFORM（tenant_id=0）；**channel_ids 置空禁用**（平台域无渠道资源，站外仅走用户订阅路径）；PATCH 限草稿态；publish/offline 子资源齐备 | 同公告 |
 | API-PPM-001/002 | 平台站内信查询（跨租户只读）：GET 列表 `?user_id=&type_code=&created_from=&created_to=&keyword=&offset=&limit=`（offset/limit 缺省 0/20 上限 100）→ `{list[{message_id, tenant_id, type_code, level, title, status, receiver_count, created_at}], total}`；GET /{message_id} 详情追加 `{biz_no, content, link_url, sender, read_count}`；数据源 = nfya_message 主档（user_id 经收件人表子查询），不触发送链 | 10400 不存在/非数字 id |
@@ -619,10 +619,10 @@ P99 ≤ 300ms（仅落库，不发验证消息——验证是独立接口，避�
 | 段 | 本项目使用 |
 |---|---|
 | 101xx | 10100 通用参数 / 10101 必填缺失 / 10102 格式或数值非法（含数量超限、时间窗口非法等零 DB 判定） |
-| 102xx | 10200 未带 token / 10201 token 已过期 / 10202 token 无效 / **10207 令牌类型不匹配**（登记占用；auth 端点凭据错误实为信封 401、锁定 429，见 §2.3 实测注） |
-| 103xx | 10300 权限不足 / 10301 越权访问他租户数据（防探测时优先 10400）/ 10302 签名校验失败（+error 子类型 SIGNATURE_MISSING/EXPIRED/REPLAYED/INVALID） |
+| 102xx | 10200 未带 token / 10201 token 已过期 / 10202 token 无效 / **10207 令牌格式或元数据解析错误**（fwk4j TokenUtils/AVS 实测语义；V1.4.1 勘误：型别不匹配实发 10300，见 103xx 行；auth 端点凭据错误实为信封 401、锁定 429，见 §2.3 实测注） |
+| 103xx | 10300 令牌类型不匹配（fwk4j 实测；V1.4.1 勘误，原登记「权限不足」语义未实装）/ 10301 越权访问他租户数据（**无发射方**——越权统一 10400 防探测）/ 10302 签名校验失败（无 error 子类型；签名错误族见 §2.4 表头行勘误） |
 | 104xx | 10400 不存在 / 10401 唯一冲突 / 10402 状态冲突 |
-| 105xx | 10500 限流（Retry-After）/ 10501 重复提交 / 10502 降级（外发队列积压熔断） |
+| 105xx | 10500 限流（Retry-After）/ 10501 重复提交 / 10502 降级（登记预留，当前无发射方） |
 | **106xx 业务自定义（本项目登记，§6.2）** | 10601~10611（跳号见表） |
 | 107xx | 10700 部分成功（V1.1 批量发送/批量操作预留） |
 | 109xx | 10900 内部错误 / 10901 三方渠道超时 |
@@ -643,7 +643,7 @@ P99 ≤ 300ms（仅落库，不发验证消息——验证是独立接口，避�
 | 10610 | 渠道已熔断自动停用 | "渠道连续失败已自动停用，请重新验证" | CHN-004（启用被拒）/熔断自动触发（发送引擎） |
 | 10611 | 同时生效公告超限 | "同时生效公告不可超过20条，请先下线旧公告" | AAN-001/PAN-001 |
 
-> 另登记扩展：`10207` 令牌类型不匹配（102xx 认证段空位占用，见 §6.1）；`10700` 为 V1.1 批量操作预留。零 DB 即可判定的校验一律归 101xx（mc-api-spec v1.6 §7.3），106xx 仅承载强业务语义。
+> 另登记扩展：`10207` 令牌格式/元数据解析错误（102xx 认证段空位占用，语义以 fwk4j 实测为准，见 §6.1）；`10502`/`10700` 为登记预留位，当前无发射方。零 DB 即可判定的校验一律归 101xx（mc-api-spec v1.6 §7.3），106xx 仅承载强业务语义。
 
 ### 6.3 防探测约定
 

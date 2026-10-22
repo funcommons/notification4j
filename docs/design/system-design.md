@@ -330,7 +330,7 @@ sequenceDiagram
 | 认证/JWT/踢人 | fwk4j-accesstoken | 双型别 token、会话管理、reset 撤会话 |
 | 信封/错误码 | fwk4j-api + fwk4j-web | ApiResponse 6 字段、ApiCode、全局异常 |
 | 签名防重放 | fwk4j-signature | runtime 发送面 HMAC |
-| 限流 | fwk4j-rate-limit | 接口面限流（yml path-patterns：runtime/assets/open，出厂 100 次/分钟/租户）；**外发渠道限速 V1.0 为引擎内置单机固定窗**（rate_limit_per_minute=18，见 §5.5），fwk4j 集中式为演进项 |
+| 限流 | fwk4j-rate-limit | 接口面限流（yml path-patterns：runtime/assets/platform-assets/open，出厂 100 次/1m/客户端 IP×路径——`default-scope: APP` 大写未命中 fwk4j 小写分支落 IP 维，NAT 共桶；V1.4.1 勘误）；**外发渠道限速 V1.0 为引擎内置单机固定窗**（rate_limit_per_minute=18，见 §5.5），fwk4j 集中式为演进项 |
 | 缓存 | fwk4j-cache | 订阅矩阵、类型/渠道配置（Caffeine+Redis 二级）；**未读数仅 Redis L2**（关闭 L1，§5.6/ADR-0005） |
 | 幂等 | fwk4j-idempotency | 全部写接口 Idempotency-Key 48h |
 | 审计 | fwk4j-audit | 平台域+admin 面写操作 → nfyp_audit_log（hash chain） |
@@ -506,7 +506,7 @@ V1.0（MVP）           V1.1                V1.2             V2.0
 
 ## 9. 引用文档
 
-- 《产品设计文档（PRD）》docs/requirements/prd.md /《数据库设计文档（DBD）》docs/design/database-design.md /《接口设计文档》docs/api/api-spec.md /《嵌入集成指南》docs/operations/integration-guide.md /《交付总结》docs/release/delivery-summary.md
+- 《产品设计文档（PRD）》docs/requirements/prd.md /《数据库设计文档（DBD）》docs/design/database-design.md /《接口设计文档》docs/api/api-spec.md /《使用手册（含前端嵌入详解）》docs/manual/（嵌入接入：docs/manual/03-开发指南/frontend-embed.md）/《交付总结》docs/release/delivery-summary.md
 - 《中间件中台租户设计》v2.1（docs/governance/middleware-tenant-design.md）/《双模式技术方案》v2.0.1（docs/governance/dual-mode-starter-pattern.md）/《开发原则》（docs/governance/dev-principles.md）
 - mc-doc-arch / mc-java-spec / mc-api-spec / mc-cache / mc-monitor / mc-perf / mc-java-security / mc-web-security 规范
 

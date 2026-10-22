@@ -99,7 +99,8 @@ notifyClient.send(tenantId, SendMessageRequest.of(
 ```
 
 前端消息中心为 Vue 3 微前端（五页 + 铃铛），iframe 嵌入 + postMessage 握手，
-接入细节见 [docs/operations/integration-guide.md](docs/operations/integration-guide.md)。
+接入细节见 [docs/manual/03-开发指南/frontend-embed.md](docs/manual/03-开发指南/frontend-embed.md)
+（速上：[quickstart-frontend](docs/manual/02-快速开始/quickstart-frontend.md)）。
 
 ## 测试与质量
 

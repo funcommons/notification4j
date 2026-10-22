@@ -3,6 +3,21 @@
 本仓库全部文档的唯一入口。状态标记：**已就绪** = 当前可读；**撰写中** = 文档治理约定路径，
 内容由对应交付流补齐（路径即契约，不另设占位文件）。
 
+## 使用手册（docs/manual/）
+
+面向**三方接入方**的成体系手册（版本口径 v1.4.0）：业务方后端接入 / 前端嵌入 / 自托管运维全链——
+按角色阅读路径、文档地图与版本坐标见 [manual/README.md](manual/README.md)。简版地图：
+
+| 目录 | 内容 |
+|---|---|
+| [01-概览](manual/01-概览/) | 产品简介 · 技术白皮书 |
+| [02-快速开始](manual/02-快速开始/) | 5 分钟速览 / 嵌入 / 跨进程 / 前端嵌入四门 quickstart |
+| [03-开发指南](manual/03-开发指南/) | 开通 · 鉴权 · 签名 · 发送 · 公告 · 渠道 · 订阅 · 前端嵌入 · 平台管理 |
+| [04-参考](manual/04-参考/) | 错误码速查 |
+| [05-部署与运维](manual/05-部署与运维/) | 部署 · 配置 · 日常运维 |
+| [06-最佳实践](manual/06-最佳实践/) | 最佳实践 · 安全清单 · 故障排查 |
+| [07-版本与支撑](manual/07-版本与支撑/) | 升级指南 · FAQ |
+
 ## 根目录文档
 
 | 文档 | 路径 | 用途 | 读者 |
@@ -24,9 +39,9 @@
 | 系统架构设计说明书（SAD） | [design/system-design.md](design/system-design.md) | 架构视图、模块划分、关键机制（已就绪） | 研发 / 架构 |
 | 数据库设计说明书（DBD） | [design/database-design.md](design/database-design.md) | 表结构 / 索引 / 迁移策略（已就绪） | 研发 / DBA |
 | 接口设计文档 | [api/api-spec.md](api/api-spec.md) | 三域 API 契约：open / api / platform（已就绪） | 业务方集成 / 前端 / 测试 |
-| 嵌入集成指南 | [operations/integration-guide.md](operations/integration-guide.md) | iframe 嵌入 + postMessage 握手 + NotifyClient 接入实操（已就绪） | 业务方集成 |
+| 前端嵌入详解 | [manual/03-开发指南/frontend-embed.md](manual/03-开发指南/frontend-embed.md) · 速上 [manual/02-快速开始/quickstart-frontend.md](manual/02-快速开始/quickstart-frontend.md) | iframe 嵌入 + postMessage 握手 + origin 白名单 + OEM 白标（已就绪；收编自旧 operations/integration-guide.md，原文件已下线） | 业务方集成 |
 | 用户使用手册 | operations/user-guide.md | 消息中心页面操作说明（撰写中） | 终端用户 / 业务方 |
-| 部署指南 | deployment/deployment-guide.md | 环境要求、配置项、上线步骤、三形态部署（撰写中；过渡期见 [backend/README.md](../backend/README.md) 部署节） | 运维 |
+| 部署指南 | [manual/05-部署与运维/deployment.md](manual/05-部署与运维/deployment.md) | 环境要求、构建产物、三形态部署、上线步骤与健康验证（已就绪；全量配置与日常运维见同目录 configuration.md / operations.md） | 运维 |
 | 测试计划 | test/test-plan.md | 四层测试体系、范围与准入准出（撰写中） | 测试 / 研发 |
 | 测试用例 | test/test-cases.md | 用例集与业务线映射（撰写中） | 测试 |
 | 测试报告归档 | test/report/ | 历轮全量回归证据（已就绪，见下节） | 测试 / 发布 |
@@ -69,8 +84,8 @@
 | 角色 | 推荐阅读路径 |
 |---|---|
 | 新人 | 根 README → requirements/prd.md → design/system-design.md → governance/dev-principles.md → test/test-plan.md |
-| 业务方集成（后端） | api/api-spec.md → operations/integration-guide.md → design/adr/adr-0007 / adr-0008（token 与签名） |
-| 业务方集成（前端嵌入） | operations/integration-guide.md → design/adr/adr-0006（iframe 握手） |
-| 运维 / 部署 | deployment/deployment-guide.md（撰写中，过渡期 backend/README.md 部署节）→ design/adr/adr-0003（引擎运维语义） |
+| 业务方集成（后端） | api/api-spec.md → manual/02-快速开始/quickstart-embed.md（或 quickstart-remote.md）→ manual/03-开发指南/sending.md → design/adr/adr-0007 / adr-0008（token 与签名） |
+| 业务方集成（前端嵌入） | manual/02-快速开始/quickstart-frontend.md → manual/03-开发指南/frontend-embed.md → design/adr/adr-0006（iframe 握手） |
+| 运维 / 部署 | manual/05-部署与运维/deployment.md → manual/05-部署与运维/operations.md → manual/07-版本与支撑/upgrade-guide.md → design/adr/adr-0003（引擎运维语义） |
 | 测试 | test/test-plan.md → test/test-cases.md → test/report/（历轮基线与缺陷台账） |
 | 发布 / 验收 | release/release-notes.md → release/delivery-checklist.md → release/acceptance-report.md → release/delivery-summary.md |
